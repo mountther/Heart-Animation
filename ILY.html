@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>I Love You - Pull Cord</title>
+<style>
+  /* إعدادات الصفحة والغرفة المظلمة */
+  body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #111;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    transition: background-color 0.5s ease;
+    overflow: hidden;
+  }
+
+  /* لون الخلفية لما يشتغل الضوء */
+  body.on {
+    background-color: #1e1e1e;
+  }
+
+  /* مكان المصباح والحبل */
+  .fixture {
+    position: absolute;
+    top: 0;
+    left: 20%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .wire {
+    width: 4px;
+    height: 80px;
+    background-color: #333;
+  }
+
+  /* تصميم المصباح */
+  .bulb {
+    width: 60px;
+    height: 60px;
+    background-color: #444;
+    border-radius: 50%;
+    position: relative;
+    transition: all 0.3s ease;
+  }
+
+  /* تأثير التوهج عند التشغيل */
+  body.on .bulb {
+    background-color: #ffeb3b;
+    box-shadow: 0 0 50px 20px rgba(255, 235, 59, 0.5);
+  }
+
+  /* تصميم الحبل */
+  .cord-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+  
+  /* حركة سحب الحبل للأسفل */
+  .cord-container:active {
+    transform: translateY(20px); 
+  }
+
+  .cord-line {
+    width: 2px;
+    height: 120px;
+    background-color: #666;
+  }
+
+  .cord-knob {
+    width: 20px;
+    height: 20px;
+    background-color: #e0e0e0;
+    border-radius: 50%;
+  }
+
+  /* تصميم النص المخفي */
+  .message {
+    color: #fff;
+    font-size: 5rem;
+    font-weight: bold;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.6s ease;
+    text-align: center;
+    text-shadow: 0 0 20px #ff4081;
+    letter-spacing: 5px;
+  }
+
+  /* إظهار النص عند التشغيل */
+  body.on .message {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* النص الإرشادي */
+  .hint {
+    position: absolute;
+    bottom: 20%;
+    color: #666;
+    text-align: center;
+    transition: opacity 0.5s;
+    font-size: 1.2rem;
+  }
+
+  /* إخفاء النص الإرشادي بعد التشغيل */
+  body.on .hint {
+    opacity: 0;
+  }
+</style>
+</head>
+<body>
+
+  <div class="fixture">
+    <div class="wire"></div>
+    <div class="bulb"></div>
+    <div class="cord-container" id="pull-switch">
+      <div class="cord-line"></div>
+      <div class="cord-knob"></div>
+    </div>
+  </div>
+
+  <div class="message">
+    I LOVE YOU ❤️
+  </div>
+
+  <div class="hint">
+    It's a little dark in here.<br>Pull the cord to say it.
+  </div>
+
+  <script>
+    const switchBtn = document.getElementById('pull-switch');
+    
+    // عند النقر على الحبل، نغير حالة الصفحة (تشغيل/إطفاء)
+    switchBtn.addEventListener('click', () => {
+      document.body.classList.toggle('on');
+    });
+  </script>
+
+</body>
+</html>
