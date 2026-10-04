@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>For You - Animated Flower</title>
+<style>
+  /* إعدادات الشاشة المظلمة */
+  body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #0a0a0a;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    overflow: hidden;
+  }
+
+  /* حاوية الوردة */
+  .flower-container {
+    position: relative;
+    width: 200px;
+    height: 300px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+  }
+
+  /* حركة نمو الساق الخضراء */
+  .stem {
+    width: 6px;
+    height: 150px;
+    background-color: #2e8b57;
+    border-radius: 4px;
+    transform-origin: bottom; /* النمو يبدأ من الأسفل */
+    animation: growStem 2s ease-out forwards;
+    position: absolute;
+    bottom: 50px;
+  }
+
+  @keyframes growStem {
+    0% { transform: scaleY(0); }
+    100% { transform: scaleY(1); }
+  }
+
+  /* حاوية الأوراق الحمراء */
+  .petals {
+    position: absolute;
+    bottom: 195px; /* موقعها فوق الساق مباشرة */
+    width: 10px;
+    height: 10px;
+  }
+
+  /* تصميم الورقة الواحدة */
+  .petal {
+    position: absolute;
+    width: 40px;
+    height: 70px;
+    background-color: #e63946; /* لون الوردة الأحمر */
+    border-radius: 50% 50% 20% 20%; /* شكل الورقة */
+    transform-origin: bottom center;
+    opacity: 0;
+    bottom: 0;
+    left: -15px; 
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+  }
+
+  /* توزيع الأوراق بشكل دائري وتأخير حركتها لتتفتح تباعاً */
+  .petal-1 { transform: rotate(0deg) scale(0); animation: bloom 1.5s ease-out 1.5s forwards; }
+  .petal-2 { transform: rotate(45deg) scale(0); animation: bloom 1.5s ease-out 1.8s forwards; }
+  .petal-3 { transform: rotate(90deg) scale(0); animation: bloom 1.5s ease-out 2.1s forwards; }
+  .petal-4 { transform: rotate(135deg) scale(0); animation: bloom 1.5s ease-out 2.4s forwards; }
+  .petal-5 { transform: rotate(180deg) scale(0); animation: bloom 1.5s ease-out 2.7s forwards; }
+  .petal-6 { transform: rotate(225deg) scale(0); animation: bloom 1.5s ease-out 3.0s forwards; }
+  .petal-7 { transform: rotate(270deg) scale(0); animation: bloom 1.5s ease-out 3.3s forwards; }
+  .petal-8 { transform: rotate(315deg) scale(0); animation: bloom 1.5s ease-out 3.6s forwards; }
+
+  /* حركة التفتح (الزوم مع الدوران) */
+  @keyframes bloom {
+    0% { transform: rotate(var(--rot)) scale(0); opacity: 0; }
+    100% { transform: rotate(var(--rot)) scale(1); opacity: 1; }
+  }
+
+  /* قلب الوردة الأصفر */
+  .center {
+    position: absolute;
+    width: 25px;
+    height: 25px;
+    background-color: #ffb703;
+    border-radius: 50%;
+    bottom: -7px;
+    left: -7px;
+    z-index: 10;
+    opacity: 0;
+    animation: fadeIn 1s ease-out 4s forwards;
+    box-shadow: 0 0 10px rgba(255, 183, 3, 0.8);
+  }
+
+  /* النص الرومانسي النهائي */
+  .message {
+    color: #ffd166;
+    font-size: 2.5rem;
+    font-style: italic;
+    margin-top: 30px;
+    opacity: 0;
+    letter-spacing: 3px;
+    animation: fadeIn 2s ease-out 4.5s forwards;
+    text-shadow: 0 0 10px rgba(255, 209, 102, 0.5);
+  }
+
+  /* حركة ظهور العناصر المخفية (القلب الأصفر والنص) */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+  <!-- رسم الوردة -->
+  <div class="flower-container">
+    <div class="stem"></div>
+    <div class="petals">
+      <!-- تمرير زاوية الدوران كمتغير CSS لكل ورقة -->
+      <div class="petal petal-1" style="--rot: 0deg;"></div>
+      <div class="petal petal-2" style="--rot: 45deg;"></div>
+      <div class="petal petal-3" style="--rot: 90deg;"></div>
+      <div class="petal petal-4" style="--rot: 135deg;"></div>
+      <div class="petal petal-5" style="--rot: 180deg;"></div>
+      <div class="petal petal-6" style="--rot: 225deg;"></div>
+      <div class="petal petal-7" style="--rot: 270deg;"></div>
+      <div class="petal petal-8" style="--rot: 315deg;"></div>
+      <div class="center"></div>
+    </div>
+  </div>
+
+  <!-- النص -->
+  <div class="message">For You ❤️</div>
+
+</body>
+</html>
