@@ -1,0 +1,2551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>The Last Rose — 11:11 | An Immersive 3D Cinematic Experience</title>
+
+  <!-- Tailwind CSS for minimal HUD layout utilities -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Cormorant Garamond (Cinematic Headings) & DM Sans (Minimal HUD) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+
+  <!-- Three.js (r128) & GSAP (3.12.5) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+  <style>
+    :root {
+      --bg-deep: #050408;
+      --crimson-dark: #8B1028;
+      --velvet-red: #B21F3B;
+      --warm-gold: #D8B47B;
+      --soft-ivory: #F3E9DC;
+      --foliage-green: #162a1a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-deep);
+      color: var(--soft-ivory);
+      font-family: 'DM Sans', sans-serif;
+      touch-action: none;
+    }
+
+    .font-cinematic {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+    }
+
+    .font-hud {
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    /* Fullscreen WebGL Canvas */
+    #webgl-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      background: radial-gradient(circle at 50% 45%, #11070d 0%, #050408 75%);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Subtle cinematic vignette & atmospheric bloom overlay */
+    .cinematic-vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+      background:
+        radial-gradient(ellipse at center, rgba(5, 4, 8, 0) 42%, rgba(5, 4, 8, 0.72) 84%, rgba(5, 4, 8, 0.96) 100%);
+    }
+
+    .ambient-bloom-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+      opacity: 0;
+      transition: opacity 2.2s ease;
+      background:
+        radial-gradient(circle at 50% 48%, rgba(178, 31, 59, 0.18) 0%, rgba(216, 180, 123, 0.08) 38%, transparent 72%);
+    }
+
+    /* Widescreen Cinema Letterbox Bars */
+    .letterbox-top, .letterbox-bottom {
+      position: fixed;
+      left: 0;
+      width: 100%;
+      height: 3.4vh;
+      min-height: 16px;
+      max-height: 36px;
+      background: #030205;
+      z-index: 10;
+      pointer-events: none;
+      transition: height 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .letterbox-top { top: 0; border-bottom: 1px solid rgba(216, 180, 123, 0.08); }
+    .letterbox-bottom { bottom: 0; border-top: 1px solid rgba(216, 180, 123, 0.08); }
+
+    /* Story Caption Typography */
+    .story-caption-wrapper {
+      position: fixed;
+      left: 50%;
+      bottom: 12.5vh;
+      transform: translateX(-50%);
+      width: 92%;
+      max-width: 780px;
+      text-align: center;
+      z-index: 15;
+      pointer-events: none;
+    }
+
+    .story-caption {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(1.45rem, 3.6vw, 2.6rem);
+      font-weight: 300;
+      font-style: italic;
+      line-height: 1.38;
+      letter-spacing: 0.05em;
+      color: var(--soft-ivory);
+      text-shadow:
+        0 4px 24px rgba(0, 0, 0, 0.95),
+        0 0 32px rgba(216, 180, 123, 0.28);
+    }
+
+    .story-caption .char-span {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+      filter: blur(4px);
+      will-change: opacity, transform, filter;
+    }
+
+    /* Luxury Interactive Buttons */
+    .cinematic-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 0.9rem 2.3rem;
+      border-radius: 9999px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.76rem;
+      font-weight: 400;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--soft-ivory);
+      background: linear-gradient(135deg, rgba(216, 180, 123, 0.15) 0%, rgba(139, 16, 40, 0.28) 100%);
+      border: 1px solid rgba(216, 180, 123, 0.5);
+      box-shadow:
+        0 0 30px rgba(216, 180, 123, 0.18),
+        inset 0 0 18px rgba(216, 180, 123, 0.12);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      cursor: pointer;
+      transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
+    }
+
+    .cinematic-btn::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 9999px;
+      background: radial-gradient(circle at center, rgba(216, 180, 123, 0.38), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.45s ease;
+      pointer-events: none;
+    }
+
+    .cinematic-btn:hover {
+      transform: translateY(-2px) scale(1.03);
+      border-color: rgba(216, 180, 123, 0.9);
+      box-shadow:
+        0 0 42px rgba(216, 180, 123, 0.38),
+        0 0 18px rgba(178, 31, 59, 0.45),
+        inset 0 0 22px rgba(216, 180, 123, 0.22);
+      color: #fff;
+    }
+
+    .cinematic-btn:hover::before {
+      opacity: 1;
+    }
+
+    .cinematic-btn:active {
+      transform: translateY(0) scale(0.98);
+    }
+
+    /* Pulsing ring for interactive call-to-action buttons */
+    .pulse-ring {
+      position: absolute;
+      inset: -6px;
+      border-radius: 9999px;
+      border: 1px solid rgba(216, 180, 123, 0.45);
+      animation: btnPulse 2.4s infinite cubic-bezier(0.22, 1, 0.36, 1);
+      pointer-events: none;
+    }
+
+    @keyframes btnPulse {
+      0% { transform: scale(0.96); opacity: 0.85; }
+      70% { transform: scale(1.15); opacity: 0; }
+      100% { transform: scale(1.15); opacity: 0; }
+    }
+
+    /* Minimal HUD Icon Buttons */
+    .hud-icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      height: 34px;
+      padding: 0 0.8rem;
+      border-radius: 9999px;
+      background: rgba(10, 8, 16, 0.58);
+      border: 1px solid rgba(216, 180, 123, 0.24);
+      color: rgba(243, 233, 220, 0.82);
+      font-size: 0.68rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .hud-icon-btn:hover {
+      border-color: rgba(216, 180, 123, 0.7);
+      color: var(--warm-gold);
+      background: rgba(20, 12, 24, 0.8);
+      box-shadow: 0 0 16px rgba(216, 180, 123, 0.18);
+    }
+
+    /* Sound Equalizer Bars */
+    .sound-bars {
+      display: inline-flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 12px;
+    }
+
+    .sound-bar {
+      width: 2px;
+      background-color: var(--warm-gold);
+      border-radius: 1px;
+      transition: height 0.2s ease;
+    }
+
+    .sound-playing .sound-bar:nth-child(1) { animation: eqBar 0.9s infinite ease-in-out 0.1s; }
+    .sound-playing .sound-bar:nth-child(2) { animation: eqBar 0.75s infinite ease-in-out 0.3s; }
+    .sound-playing .sound-bar:nth-child(3) { animation: eqBar 1.05s infinite ease-in-out 0.2s; }
+    .sound-playing .sound-bar:nth-child(4) { animation: eqBar 0.85s infinite ease-in-out 0.4s; }
+
+    @keyframes eqBar {
+      0%, 100% { height: 3px; opacity: 0.5; }
+      50% { height: 12px; opacity: 1; }
+    }
+
+    /* Progress Dots */
+    .chapter-dot {
+      position: relative;
+      width: 26px;
+      height: 26px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+    }
+
+    .chapter-dot::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 9999px;
+      background: rgba(243, 233, 220, 0.22);
+      border: 1px solid rgba(216, 180, 123, 0.32);
+      transition: all 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .chapter-dot.active::before {
+      width: 10px;
+      height: 10px;
+      background: var(--warm-gold);
+      border-color: #fff;
+      box-shadow: 0 0 14px rgba(216, 180, 123, 0.95);
+    }
+
+    .chapter-dot.completed::before {
+      background: rgba(178, 31, 59, 0.85);
+      border-color: rgba(216, 180, 123, 0.65);
+    }
+
+    .chapter-dot:hover::before {
+      transform: scale(1.35);
+      border-color: var(--warm-gold);
+    }
+
+    /* Final Reveal Overlay Card */
+    #final-message-card {
+      position: fixed;
+      inset: 0;
+      z-index: 18;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12vh 1.25rem 11vh;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 1.4s ease, visibility 1.4s ease;
+    }
+
+    #final-message-card.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .final-glass-panel {
+      background: radial-gradient(ellipse at center, rgba(14, 7, 16, 0.74) 0%, rgba(5, 4, 8, 0.52) 100%);
+      border: 1px solid rgba(216, 180, 123, 0.28);
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(139, 16, 40, 0.28);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 1.6rem 2.2rem;
+      border-radius: 1.5rem;
+      max-width: 650px;
+      width: 100%;
+      text-align: center;
+      pointer-events: auto;
+    }
+
+    /* Loading Overlay */
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: radial-gradient(circle at 50% 45%, #14060d 0%, #050408 75%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      transition: opacity 1.3s cubic-bezier(0.22, 1, 0.36, 1), visibility 1.3s;
+    }
+
+    #loading-screen.hidden-screen {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #050408;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(216, 180, 123, 0.35);
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =========================================================================
+       1. LOADING & INTRO GATEWAY SCREEN
+       ========================================================================= -->
+  <div id="loading-screen" role="dialog" aria-label="Loading The Last Rose 11:11">
+    <div class="max-w-md w-full text-center flex flex-col items-center">
+      <!-- Delicate SVG Rose Emblem -->
+      <div class="relative mb-6 w-16 h-16 flex items-center justify-center">
+        <div class="absolute inset-0 rounded-full bg-[#8B1028]/30 blur-xl animate-pulse"></div>
+        <svg class="w-12 h-12 text-[#D8B47B]" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.3">
+          <path d="M32 10C25 10 20 16 20 23C20 31 26 36 32 38C38 36 44 31 44 23C44 16 39 10 32 10Z" stroke-opacity="0.9"/>
+          <path d="M32 14C28 16 26 20 26 24C26 29 29 32 32 34C35 32 38 29 38 24C38 20 36 16 32 14Z" fill="#8B1028" fill-opacity="0.5"/>
+          <path d="M16 22C13 27 16 35 24 38C27 39 30 39 32 38" stroke-opacity="0.7"/>
+          <path d="M48 22C51 27 48 35 40 38C37 39 34 39 32 38" stroke-opacity="0.7"/>
+          <path d="M32 38V56" stroke-opacity="0.85"/>
+          <path d="M32 47C27 45 23 47 21 50C25 51 29 50 32 47Z" fill="#162a1a" stroke-opacity="0.8"/>
+          <path d="M32 43C37 41 41 43 43 46C39 47 35 46 32 43Z" fill="#162a1a" stroke-opacity="0.8"/>
+        </svg>
+      </div>
+
+      <p class="font-hud text-[11px] uppercase tracking-[0.38em] text-[#D8B47B]/80 mb-2">
+        An Interactive 3D Valentine Experience
+      </p>
+      <h1 class="font-cinematic text-4xl sm:text-5xl font-light tracking-wider text-[#F3E9DC] mb-2">
+        The Last Rose <span class="italic text-[#D8B47B]">— 11:11</span>
+      </h1>
+      <p id="loading-recipient-preview" class="font-cinematic italic text-lg text-[#D8B47B]/90 mb-6 hidden"></p>
+
+      <!-- Loading Progress Bar -->
+      <div id="loading-bar-wrap" class="w-56 h-[2px] bg-[#F3E9DC]/10 rounded-full overflow-hidden mb-3 mt-2">
+        <div id="loading-bar-fill" class="h-full bg-gradient-to-r from-[#8B1028] via-[#B21F3B] to-[#D8B47B] transition-all duration-300" style="width: 0%;"></div>
+      </div>
+      <p id="loading-status-text" class="font-hud text-[11px] tracking-[0.25em] uppercase text-[#F3E9DC]/55 mb-8">
+        Sculpting 3D Velvet Petals...
+      </p>
+
+      <!-- Enter Experience Button (Revealed once 3D scene is ready) -->
+      <div id="enter-btn-container" class="opacity-0 pointer-events-none transition-all duration-700 transform translate-y-2">
+        <button id="btn-enter-story" class="cinematic-btn">
+          <span class="pulse-ring"></span>
+          <span>ENTER EXPERIENCE</span>
+          <svg class="w-3.5 h-3.5 text-[#D8B47B]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        </button>
+        <p class="font-hud text-[11px] tracking-[0.18em] text-[#F3E9DC]/45 mt-4">
+          Turn on sound for the full cinematic journey
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       2. THREE.JS 3D STAGE & ATMOSPHERIC OVERLAYS
+       ========================================================================= -->
+  <div id="webgl-container" aria-hidden="true"></div>
+  <div id="ambient-bloom-overlay" class="ambient-bloom-overlay"></div>
+  <div class="cinematic-vignette"></div>
+
+  <div class="letterbox-top"></div>
+  <div class="letterbox-bottom"></div>
+
+  <!-- =========================================================================
+       3. MINIMALIST TOP HUD BAR
+       ========================================================================= -->
+  <header class="fixed top-[4.2vh] left-0 right-0 z-20 px-4 sm:px-8 flex items-center justify-between pointer-events-none">
+    <!-- Brand Title -->
+    <div class="flex items-center gap-2.5 pointer-events-auto">
+      <span class="w-2 h-2 rounded-full bg-[#B21F3B] shadow-[0_0_10px_#B21F3B]"></span>
+      <span class="font-cinematic text-xs sm:text-base tracking-[0.24em] uppercase text-[#F3E9DC]/85">
+        THE LAST ROSE <span class="text-[#D8B47B]">· 11:11</span>
+      </span>
+    </div>
+
+    <!-- Discreet Right Controls -->
+    <div class="flex items-center gap-2 pointer-events-auto">
+      <!-- Audio Mute / Unmute Toggle -->
+      <button id="btn-sound-toggle" class="hud-icon-btn sound-playing" title="Toggle Ambient Audio" aria-label="Toggle Sound">
+        <div class="sound-bars" aria-hidden="true">
+          <span class="sound-bar" style="height: 5px;"></span>
+          <span class="sound-bar" style="height: 10px;"></span>
+          <span class="sound-bar" style="height: 7px;"></span>
+          <span class="sound-bar" style="height: 11px;"></span>
+        </div>
+        <span id="sound-label" class="hidden sm:inline">Sound On</span>
+      </button>
+
+      <!-- Reduced Motion Toggle -->
+      <button id="btn-motion-toggle" class="hud-icon-btn" title="Toggle Reduced Motion" aria-label="Toggle Reduced Motion">
+        <svg class="w-3.5 h-3.5 text-[#D8B47B]" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        <span id="motion-label" class="hidden md:inline">Motion: Full</span>
+      </button>
+
+      <!-- Personalize Gift Modal Trigger -->
+      <button id="btn-open-personalize" class="hud-icon-btn" title="Personalize Recipient & Message" aria-label="Personalize Gift">
+        <span class="text-[#D8B47B] text-xs">✎</span>
+        <span class="hidden sm:inline">Personalize</span>
+      </button>
+
+      <!-- Discreet Replay Button -->
+      <button id="btn-hud-replay" class="hud-icon-btn" title="Replay From Beginning" aria-label="Replay Experience">
+        <svg class="w-3.5 h-3.5 text-[#D8B47B]" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        <span class="hidden md:inline">Replay</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       4. INTERACTIVE SCENE 3 PROMPT ("TOUCH THE LIGHT")
+       ========================================================================= -->
+  <div id="scene3-interaction-layer" class="fixed inset-x-0 bottom-[21vh] z-20 flex flex-col items-center justify-center pointer-events-none opacity-0 invisible transition-all duration-700">
+    <button id="btn-touch-light" class="cinematic-btn pointer-events-auto">
+      <span class="pulse-ring"></span>
+      <span class="w-2.5 h-2.5 rounded-full bg-[#D8B47B] shadow-[0_0_12px_#D8B47B] animate-ping"></span>
+      <span>TOUCH THE LIGHT</span>
+    </button>
+    <p class="font-hud text-[11px] tracking-[0.22em] uppercase text-[#D8B47B]/75 mt-3 text-center px-4">
+      Click or tap the golden light orb to awaken the rose
+    </p>
+  </div>
+
+  <!-- =========================================================================
+       5. SCENE 5 "11:11" ETHEREAL CLOCK HALO OVERLAY
+       ========================================================================= -->
+  <div id="clock-1111-overlay" class="fixed inset-x-0 top-[13vh] z-15 flex flex-col items-center justify-center pointer-events-none opacity-0 transition-opacity duration-1000">
+    <div class="font-hud text-[10px] tracking-[0.45em] uppercase text-[#D8B47B]/75 mb-1">
+      Make A Wish
+    </div>
+    <div class="font-cinematic text-5xl sm:text-7xl font-light tracking-[0.26em] text-[#D8B47B]/35 drop-shadow-[0_0_36px_rgba(216,180,123,0.75)]">
+      11:11
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       6. SCENE 6 FINAL GIFT REVEAL OVERLAY
+       ========================================================================= -->
+  <div id="final-message-card" aria-live="polite">
+    <!-- Top Recipient Dedication -->
+    <div class="text-center pointer-events-none mt-1">
+      <p id="final-recipient-badge" class="font-hud text-xs sm:text-sm uppercase tracking-[0.38em] text-[#D8B47B] drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]"></p>
+    </div>
+
+    <!-- Bottom Romantic Card & Replay Action -->
+    <div class="final-glass-panel">
+      <p id="final-headline-text" class="font-cinematic italic text-2xl sm:text-4xl font-light text-[#F3E9DC] tracking-wide leading-snug mb-3 drop-shadow-[0_2px_16px_rgba(0,0,0,0.9)]">
+        "You are the reason this world blooms."
+      </p>
+
+      <p id="final-custom-letter" class="font-cinematic text-base sm:text-lg text-[#F3E9DC]/85 max-w-lg mx-auto mb-4 leading-relaxed hidden"></p>
+
+      <div class="w-16 h-[1px] bg-gradient-to-r from-transparent via-[#D8B47B]/60 to-transparent mx-auto my-3"></div>
+
+      <p id="final-subtext-text" class="font-hud text-xs sm:text-sm uppercase tracking-[0.34em] text-[#D8B47B] mb-6">
+        Happy 11:11 ❤️
+      </p>
+
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        <button id="btn-watch-again" class="cinematic-btn">
+          <svg class="w-3.5 h-3.5 text-[#D8B47B]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          <span>WATCH AGAIN</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       7. CINEMATIC STORY CAPTION CONTAINER
+       ========================================================================= -->
+  <div class="story-caption-wrapper" aria-live="polite">
+    <p id="story-caption" class="story-caption"></p>
+  </div>
+
+  <!-- =========================================================================
+       8. BOTTOM STORY PROGRESS INDICATOR (6 SCENES)
+       ========================================================================= -->
+  <footer class="fixed bottom-[4.2vh] left-0 right-0 z-20 px-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 pointer-events-none">
+    <!-- Current Scene Title -->
+    <div class="flex items-center gap-2.5">
+      <span id="chapter-number-label" class="font-hud text-[10px] tracking-[0.3em] uppercase text-[#D8B47B]">
+        Scene I
+      </span>
+      <span class="text-[#D8B47B]/40">•</span>
+      <span id="chapter-title-label" class="font-cinematic italic text-sm sm:text-base text-[#F3E9DC]/85 tracking-wider">
+        The Forgotten World
+      </span>
+    </div>
+
+    <!-- 6 Interactive Progress Dots -->
+    <nav class="flex items-center gap-1 pointer-events-auto" aria-label="Story Chapters">
+      <button class="chapter-dot active" data-scene="1" title="Scene I: The Forgotten World" aria-label="Scene 1"></button>
+      <button class="chapter-dot" data-scene="2" title="Scene II: The Last Rose" aria-label="Scene 2"></button>
+      <button class="chapter-dot" data-scene="3" title="Scene III: A Touch of Life" aria-label="Scene 3"></button>
+      <button class="chapter-dot" data-scene="4" title="Scene IV: The Bloom" aria-label="Scene 4"></button>
+      <button class="chapter-dot" data-scene="5" title="Scene V: The 11:11 Moment" aria-label="Scene 5"></button>
+      <button class="chapter-dot" data-scene="6" title="Scene VI: The Final Gift" aria-label="Scene 6"></button>
+    </nav>
+  </footer>
+
+  <!-- =========================================================================
+       9. PERSONALIZATION & SHARE MODAL
+       ========================================================================= -->
+  <div id="personalize-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 opacity-0 invisible transition-all duration-300" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="bg-[#0b070e] border border-[#D8B47B]/35 rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-[0_0_60px_rgba(139,16,40,0.35)] text-[#F3E9DC] relative">
+      <button id="btn-close-modal" class="absolute top-5 right-5 w-8 h-8 rounded-full border border-[#D8B47B]/25 flex items-center justify-center text-[#F3E9DC]/70 hover:text-[#D8B47B] hover:border-[#D8B47B]" aria-label="Close Modal">
+        ✕
+      </button>
+
+      <p class="font-hud text-[10px] uppercase tracking-[0.32em] text-[#D8B47B] mb-1">
+        Customize Your Valentine Gift
+      </p>
+      <h2 id="modal-title" class="font-cinematic text-2xl sm:text-3xl font-light text-[#F3E9DC] mb-5">
+        Personalize <span class="italic text-[#D8B47B]">The Last Rose</span>
+      </h2>
+
+      <div class="space-y-4 font-hud text-xs">
+        <div>
+          <label for="input-recipient" class="block uppercase tracking-[0.18em] text-[#D8B47B]/85 mb-1.5">
+            Recipient's Name (Optional)
+          </label>
+          <input id="input-recipient" type="text" maxlength="50" placeholder="e.g., For My Beloved Sarah"
+            class="w-full px-3.5 py-2.5 rounded-lg bg-[#050408] border border-[#D8B47B]/30 text-[#F3E9DC] focus:outline-none focus:border-[#D8B47B]" />
+        </div>
+
+        <div>
+          <label for="input-headline" class="block uppercase tracking-[0.18em] text-[#D8B47B]/85 mb-1.5">
+            Main Romantic Message
+          </label>
+          <input id="input-headline" type="text" maxlength="110" placeholder="You are the reason this world blooms."
+            class="w-full px-3.5 py-2.5 rounded-lg bg-[#050408] border border-[#D8B47B]/30 text-[#F3E9DC] focus:outline-none focus:border-[#D8B47B]" />
+        </div>
+
+        <div>
+          <label for="input-letter" class="block uppercase tracking-[0.18em] text-[#D8B47B]/85 mb-1.5">
+            Personal Note (Optional)
+          </label>
+          <textarea id="input-letter" rows="2" maxlength="220" placeholder="اذا كدرت انطيج شي بهالحياة فراح انطيج القدرة على رؤية نفسج بعيوني.
+		  If I could give you one thing in life, it would be the ability to see yourself through my eyes."
+            class="w-full px-3.5 py-2 rounded-lg bg-[#050408] border border-[#D8B47B]/30 text-[#F3E9DC] focus:outline-none focus:border-[#D8B47B] resize-none"></textarea>
+        </div>
+
+        <div>
+          <label for="input-subtext" class="block uppercase tracking-[0.18em] text-[#D8B47B]/85 mb-1.5">
+            Closing Signature
+          </label>
+          <input id="input-subtext" type="text" maxlength="60" placeholder="Happy 11:11 🤎IT❤️"
+            class="w-full px-3.5 py-2.5 rounded-lg bg-[#050408] border border-[#D8B47B]/30 text-[#F3E9DC] focus:outline-none focus:border-[#D8B47B]" />
+        </div>
+      </div>
+
+      <div class="mt-6 flex flex-col sm:flex-row gap-3">
+        <button id="btn-save-personalize" class="cinematic-btn flex-1 py-2.5 justify-center">
+          <span>Apply Changes</span>
+        </button>
+        <button id="btn-copy-share-link" class="hud-icon-btn justify-center py-2.5 px-4 border-[#D8B47B]/45">
+          <span id="copy-link-label">Copy Share Link</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       10. APPLICATION ARCHITECTURE & 3D STORY ENGINE
+       ========================================================================= -->
+  <script>
+    /**
+     * =========================================================================
+     * INSTRUCTIONS FOR RUNNING & CUSTOMIZING THIS PROJECT
+     * =========================================================================
+     * 1. HOW TO RUN:
+     *    Save this file as `index.html` and open it directly in any modern browser
+     *    (Chrome, Safari, Edge, Firefox) on Desktop, iPhone, iPad, or Android.
+     *
+     * 2. HOW TO CHANGE THE RECIPIENT'S NAME & FINAL ROMANTIC MESSAGE:
+     *    - Method A (Directly in Code): Edit the `GIFT_CONFIG` object right below.
+     *    - Method B (Live in Browser): Click the "✎ Personalize" button in the
+     *      top-right corner to customize the recipient's name and message or copy
+     *      a personalized URL (`?to=Name&msg=...&sub=...`).
+     * =========================================================================
+     */
+    const GIFT_CONFIG = {
+      recipientName: "", // e.g., "For My Love" — displayed above the final message if set
+      finalHeadline: "You are the reason this world blooms.",
+      finalSubtext: "Happy 11:11 🤎IT❤️",
+      personalNote: "اذا كدرت انطيج شي بهالحياة فراح انطيج القدرة على رؤية نفسج بعيوني.If I could give you one thing in life, it would be the ability to see yourself through my eyes."
+    };
+
+    // Parse URL parameters (?to=...&msg=...&sub=...&note=...) if present
+    (function loadUrlPersonalization() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('to')) GIFT_CONFIG.recipientName = params.get('to');
+        if (params.get('msg')) GIFT_CONFIG.finalHeadline = params.get('msg');
+        if (params.get('sub')) GIFT_CONFIG.finalSubtext = params.get('sub');
+        if (params.get('note') !== null) GIFT_CONFIG.personalNote = params.get('note');
+      } catch (e) {
+        console.warn('URL parameter parsing skipped:', e);
+      }
+    })();
+
+    /**
+     * =========================================================================
+     * PROCEDURAL CINEMATIC SOUND ENGINE (Web Audio API)
+     * Generates warm ambient pads, magical orb chimes, bloom harp sparkles,
+     * the 11:11 celestial bell, and the final heart reveal swell with zero
+     * external audio dependencies.
+     * =========================================================================
+     */
+    class CinematicSoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.masterGain = null;
+        this.ambientGain = null;
+        this.padFilter = null;
+        this.isMuted = false;
+        this.isInitialized = false;
+        this.padOscillators = [];
+      }
+
+      init() {
+        if (this.isInitialized) {
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
+          return;
+        }
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) return;
+          this.ctx = new AudioContextClass();
+
+          this.masterGain = this.ctx.createGain();
+          this.masterGain.gain.value = this.isMuted ? 0.0001 : 0.75;
+          this.masterGain.connect(this.ctx.destination);
+
+          this.startAmbientDrone();
+          this.isInitialized = true;
+        } catch (err) {
+          console.warn('Web Audio API initialization skipped:', err);
+        }
+      }
+
+      startAmbientDrone() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+
+        this.ambientGain = this.ctx.createGain();
+        this.ambientGain.gain.setValueAtTime(0.001, now);
+        this.ambientGain.gain.exponentialRampToValueAtTime(0.14, now + 4.0);
+
+        this.padFilter = this.ctx.createBiquadFilter();
+        this.padFilter.type = 'lowpass';
+        this.padFilter.frequency.setValueAtTime(320, now);
+        this.padFilter.Q.setValueAtTime(1.1, now);
+
+        this.ambientGain.connect(this.padFilter);
+        this.padFilter.connect(this.masterGain);
+
+        // Deep D minor 9 atmospheric pad (D2, A2, F3, A3, E4)
+        const freqs = [73.42, 110.0, 174.61, 220.0, 329.63];
+        freqs.forEach((f, idx) => {
+          const osc = this.ctx.createOscillator();
+          const oscGain = this.ctx.createGain();
+          osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+          osc.frequency.setValueAtTime(f, now);
+          osc.detune.setValueAtTime((idx - 2) * 4.5, now);
+
+          oscGain.gain.value = idx < 2 ? 0.24 : 0.085;
+          osc.connect(oscGain);
+          oscGain.connect(this.ambientGain);
+          osc.start(now);
+          this.padOscillators.push({ osc, oscGain });
+        });
+      }
+
+      setWorldWarmth(warmthNormalized) {
+        if (!this.ctx || !this.padFilter) return;
+        const now = this.ctx.currentTime;
+        const cutoff = 300 + warmthNormalized * 720;
+        this.padFilter.frequency.setTargetAtTime(cutoff, now, 1.2);
+      }
+
+      playOrbAppearChime() {
+        if (!this.ctx || this.isMuted) return;
+        const notes = [587.33, 880.0, 1174.66, 1318.51];
+        notes.forEach((freq, i) => {
+          this.triggerTone(freq, this.ctx.currentTime + i * 0.14, 2.2, 0.055, 'sine');
+        });
+      }
+
+      playBloomSparkle() {
+        if (!this.ctx || this.isMuted) return;
+        const now = this.ctx.currentTime;
+        const scale = [293.66, 369.99, 440.0, 554.37, 587.33, 739.99, 880.0, 1108.73, 1174.66, 1479.98];
+        scale.forEach((freq, idx) => {
+          this.triggerTone(freq, now + idx * 0.15, 3.2, 0.05, idx % 2 === 0 ? 'sine' : 'triangle');
+        });
+      }
+
+      play1111Bell() {
+        if (!this.ctx || this.isMuted) return;
+        const now = this.ctx.currentTime;
+        this.triggerTone(528.0, now, 5.0, 0.095, 'sine');
+        this.triggerTone(1056.0, now + 0.02, 3.8, 0.04, 'sine');
+        this.triggerTone(1584.0, now + 0.05, 2.6, 0.025, 'triangle');
+        this.triggerTone(792.0, now + 1.05, 4.5, 0.065, 'sine');
+      }
+
+      playFinalHeartSwell() {
+        if (!this.ctx || this.isMuted) return;
+        const now = this.ctx.currentTime;
+        const chord = [146.83, 220.0, 293.66, 369.99, 440.0, 587.33, 739.99];
+        chord.forEach((freq, i) => {
+          this.triggerTone(freq, now + i * 0.08, 6.2, 0.055, 'sine');
+        });
+      }
+
+      triggerTone(freq, startTime, duration, peakGain, type = 'sine') {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, startTime);
+
+        gain.gain.setValueAtTime(0.0001, startTime);
+        gain.gain.linearRampToValueAtTime(peakGain, startTime + 0.06);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(startTime);
+        osc.stop(startTime + duration + 0.05);
+      }
+
+      toggleMute() {
+        this.isMuted = !this.isMuted;
+        if (!this.isInitialized && !this.isMuted) {
+          this.init();
+        }
+        if (this.ctx && this.masterGain) {
+          this.masterGain.gain.setTargetAtTime(this.isMuted ? 0.0001 : 0.75, this.ctx.currentTime, 0.15);
+        }
+        return this.isMuted;
+      }
+    }
+
+    const soundEngine = new CinematicSoundEngine();
+
+    /**
+     * =========================================================================
+     * PROCEDURAL TEXTURE GENERATORS
+     * =========================================================================
+     */
+    function createGlowParticleTexture(innerColor = '#fffdf7', midColor = '#D8B47B') {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createRadialGradient(64, 64, 2, 64, 64, 62);
+      grad.addColorStop(0, innerColor);
+      grad.addColorStop(0.28, midColor);
+      grad.addColorStop(0.65, 'rgba(216, 180, 123, 0.18)');
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 128, 128);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.needsUpdate = true;
+      return tex;
+    }
+
+    function createVelvetPetalBumpTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#808080';
+      ctx.fillRect(0, 0, 256, 256);
+
+      // Delicate longitudinal organic petal veins
+      for (let i = 0; i < 90; i++) {
+        const startX = 128 + (Math.random() - 0.5) * 40;
+        const endX = (i / 90) * 256 + (Math.random() - 0.5) * 18;
+        ctx.strokeStyle = i % 2 === 0 ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.09)';
+        ctx.lineWidth = 1 + Math.random() * 1.8;
+        ctx.beginPath();
+        ctx.moveTo(startX, 256);
+        ctx.quadraticCurveTo((startX + endX) * 0.5, 128, endX, 0);
+        ctx.stroke();
+      }
+
+      // Subtle cellular velvet sheen micro-grain
+      const imgData = ctx.getImageData(0, 0, 256, 256);
+      const data = imgData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const grain = (Math.random() - 0.5) * 14;
+        data[i] = Math.min(255, Math.max(0, data[i] + grain));
+        data[i + 1] = data[i];
+        data[i + 2] = data[i];
+      }
+      ctx.putImageData(imgData, 0, 0);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.wrapS = THREE.ClampToEdgeWrapping;
+      tex.wrapT = THREE.ClampToEdgeWrapping;
+      tex.needsUpdate = true;
+      return tex;
+    }
+
+    /**
+     * =========================================================================
+     * PHOTOREALISTIC 3D ROSE GEOMETRY BUILDERS
+     * =========================================================================
+     */
+    function createSculptedRosePetalGeometry(tierNormalized, seed = 0) {
+      const segU = 18;
+      const segV = 20;
+      const geom = new THREE.BufferGeometry();
+
+      const positions = [];
+      const colors = [];
+      const uvs = [];
+      const indices = [];
+
+      const baseShadowColor = new THREE.Color('#2d0209');
+      const midCrimsonColor = new THREE.Color('#8B1028');
+      const lipVelvetColor = new THREE.Color('#B21F3B');
+      const edgeRimColor = new THREE.Color('#dc3252');
+      const tempColor = new THREE.Color();
+
+      const widthScale = 0.36 + tierNormalized * 0.52;
+      const heightScale = 0.62 + tierNormalized * 0.56;
+      const cupDepth = 0.22 + (1 - tierNormalized) * 0.14;
+      const lipCurlStrength = 0.12 + Math.pow(tierNormalized, 1.3) * 0.36;
+
+      for (let iv = 0; iv <= segV; iv++) {
+        const v = iv / segV;
+        const widthProfile = Math.pow(Math.sin(v * Math.PI * 0.88), 0.58) * (0.25 + 0.85 * Math.pow(v, 0.45));
+
+        for (let iu = 0; iu <= segU; iu++) {
+          const u = (iu / segU) * 2 - 1;
+          const absU = Math.abs(u);
+
+          const x = u * widthScale * widthProfile;
+          const topEdgeDip = v > 0.8 ? -Math.exp(-Math.pow(u * 3.5, 2)) * 0.03 * (v - 0.8) * 5 : 0;
+          const y = v * heightScale + topEdgeDip;
+
+          const bowlZ = (1 - u * u) * Math.sin(v * Math.PI) * cupDepth;
+
+          let recurveZ = 0;
+          if (v > 0.58) {
+            const tLip = (v - 0.58) / 0.42;
+            const cornerBoost = 0.65 + 0.55 * Math.pow(absU, 1.5);
+            recurveZ = -Math.pow(tLip, 2.1) * lipCurlStrength * cornerBoost;
+            recurveZ += Math.sin(u * 4.5 + seed) * 0.022 * tLip * tierNormalized;
+          }
+
+          const z = bowlZ + recurveZ;
+          positions.push(x, y, z);
+          uvs.push((u + 1) * 0.5, v);
+
+          if (v < 0.45) {
+            tempColor.lerpColors(baseShadowColor, midCrimsonColor, v / 0.45);
+          } else {
+            tempColor.lerpColors(midCrimsonColor, lipVelvetColor, (v - 0.45) / 0.55);
+          }
+          if (v > 0.78) {
+            const rimFactor = ((v - 0.78) / 0.22) * (0.4 + 0.6 * absU);
+            tempColor.lerp(edgeRimColor, rimFactor * 0.38);
+          }
+          colors.push(tempColor.r, tempColor.g, tempColor.b);
+        }
+      }
+
+      for (let iv = 0; iv < segV; iv++) {
+        for (let iu = 0; iu < segU; iu++) {
+          const a = iv * (segU + 1) + iu;
+          const b = a + 1;
+          const c = (iv + 1) * (segU + 1) + iu;
+          const d = c + 1;
+          indices.push(a, b, d);
+          indices.push(a, d, c);
+        }
+      }
+
+      geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+      geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      geom.setIndex(indices);
+      geom.computeVertexNormals();
+      return geom;
+    }
+
+    function createSerratedLeafGeometry() {
+      const segU = 10;
+      const segV = 14;
+      const geom = new THREE.BufferGeometry();
+      const positions = [];
+      const uvs = [];
+      const indices = [];
+
+      for (let iv = 0; iv <= segV; iv++) {
+        const v = iv / segV;
+        const baseWidth = Math.sin(v * Math.PI) * (1 - 0.25 * v);
+        const serration = 1 + 0.08 * Math.sin(v * Math.PI * 10);
+
+        for (let iu = 0; iu <= segU; iu++) {
+          const u = (iu / segU) * 2 - 1;
+          const absU = Math.abs(u);
+          const x = u * 0.24 * baseWidth * serration;
+          const y = v * 0.65;
+          const z = -absU * 0.045 - Math.pow(v, 1.8) * 0.11;
+          positions.push(x, y, z);
+          uvs.push((u + 1) * 0.5, v);
+        }
+      }
+
+      for (let iv = 0; iv < segV; iv++) {
+        for (let iu = 0; iu < segU; iu++) {
+          const a = iv * (segU + 1) + iu;
+          const b = a + 1;
+          const c = (iv + 1) * (segU + 1) + iu;
+          const d = c + 1;
+          indices.push(a, b, d);
+          indices.push(a, d, c);
+        }
+      }
+
+      geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      geom.setIndex(indices);
+      geom.computeVertexNormals();
+      return geom;
+    }
+
+    /**
+     * =========================================================================
+     * MAIN 3D SCENE & CINEMATIC TIMELINE STATE
+     * =========================================================================
+     */
+    const container = document.getElementById('webgl-container');
+    const isMobileDevice = window.innerWidth < 768;
+
+    let scene, camera, renderer;
+    let roseRootGroup, flowerHeadGroup;
+    let stemJoints = [];
+    let petalControllers = [];
+    let sepalControllers = [];
+    let leafControllers = [];
+    let roseMaterial, foliageMaterial;
+    let coreRoseLight, keySpotLight, crimsonRimLight, goldFillLight, volumetricConeMesh;
+
+    // Particle & Instanced Systems
+    let goldDustPoints, starFieldPoints;
+    let clock1111Points, clock1111Geometry;
+    let clockTargetPositions = [], clockScatterPositions = [];
+    let clockGatherState = { progress: 0, opacity: 0 };
+
+    // Scene 3 Interactive Golden Light Orb
+    let orbGroup, orbCoreMesh, orbHaloSprite, orbLight, orbTrailPoints;
+    let orbTrailHistory = [];
+    let isWaitingForOrbTouch = false;
+    let orbFlightActive = false;
+    const orbBasePos = new THREE.Vector3(1.15, 0.58, 1.05);
+
+    // Instanced Swirling 3D Rose Petals (650 individual 3D curved petals)
+    const SWARM_COUNT = isMobileDevice ? 420 : 650;
+    let petalSwarmMesh;
+    let swarmData = [];
+    const swarmDummy = new THREE.Object3D();
+    const swarmState = {
+      activeAlpha: 0,
+      heartMorph: 0, // 0 = spiral vortex around rose/clock, 1 = 3D Heart formation
+      vortexSpeed: 1.0
+    };
+
+    // Unified Bloom State (0 = wilted, 1 = fully bloomed)
+    const roseAnimState = {
+      bloomProgress: 0,
+      worldWarmth: 0,
+      roseVisibility: 0
+    };
+
+    // Camera Rig State animated cleanly by GSAP
+    const camRig = {
+      angle: -0.25,
+      radius: 7.4,
+      height: 0.95,
+      lookX: 0,
+      lookY: 0.35,
+      lookZ: 0,
+      autoOrbitSpeed: 0.06
+    };
+
+    // Pointer Parallax & Raycaster
+    const pointer = new THREE.Vector2(0, 0);
+    const smoothPointer = new THREE.Vector2(0, 0);
+    const raycaster = new THREE.Raycaster();
+
+    // Story Timeline State
+    let activeTimeline = null;
+    let currentSceneIndex = 1;
+    let isReducedMotion = false;
+    const clock = new THREE.Clock();
+
+    const CHAPTER_META = [
+      { num: 'Scene I', title: 'The Forgotten World' },
+      { num: 'Scene II', title: 'The Last Rose' },
+      { num: 'Scene III', title: 'A Touch of Life' },
+      { num: 'Scene IV', title: 'The Bloom' },
+      { num: 'Scene V', title: 'The 11:11 Moment' },
+      { num: 'Scene VI', title: 'The Final Gift' }
+    ];
+
+    /**
+     * Initialize Three.js WebGL Scene, Lights, Rose, Orb & Particle Systems
+     */
+    function initThreeScene() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color('#050408');
+      scene.fog = new THREE.FogExp2('#050408', 0.065);
+
+      const isPortrait = window.innerWidth < window.innerHeight;
+      camera = new THREE.PerspectiveCamera(
+        isPortrait ? 52 : 40,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        100
+      );
+
+      try {
+        renderer = new THREE.WebGLRenderer({
+          antialias: true,
+          powerPreference: 'high-performance'
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.18;
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        container.appendChild(renderer.domElement);
+      } catch (e) {
+        console.error('WebGL initialization failed:', e);
+        document.getElementById('loading-status-text').textContent = 'WebGL is required to view this 3D experience.';
+        return;
+      }
+
+      setupLights();
+      buildHero3DRose();
+      buildAtmosphericParticles();
+      buildGoldenLightOrb();
+      build1111ParticleClock();
+      buildInstancedPetalSwarm();
+
+      applyRoseBloomState(0);
+      setRoseSceneVisibility(0);
+
+      window.addEventListener('resize', onWindowResize);
+      window.addEventListener('pointermove', onPointerMove, { passive: true });
+      window.addEventListener('pointerdown', onCanvasPointerDown);
+    }
+
+    /**
+     * Studio Macro Lighting & Volumetric Spotlight Cone
+     */
+    function setupLights() {
+      const ambientLight = new THREE.AmbientLight('#1a0c14', 0.85);
+      scene.add(ambientLight);
+
+      keySpotLight = new THREE.SpotLight('#fff0dd', 0.4);
+      keySpotLight.position.set(1.2, 6.2, 2.6);
+      keySpotLight.angle = Math.PI / 5.5;
+      keySpotLight.penumbra = 0.85;
+      keySpotLight.decay = 1.5;
+      keySpotLight.distance = 22;
+      scene.add(keySpotLight);
+
+      crimsonRimLight = new THREE.PointLight('#d41c42', 0.2, 12);
+      crimsonRimLight.position.set(-2.6, 1.8, -2.2);
+      scene.add(crimsonRimLight);
+
+      goldFillLight = new THREE.PointLight('#D8B47B', 0.2, 11);
+      goldFillLight.position.set(2.5, -0.5, 2.5);
+      scene.add(goldFillLight);
+
+      const coneGeom = new THREE.ConeGeometry(2.7, 9.5, 32, 1, true);
+      const coneMat = new THREE.MeshBasicMaterial({
+        color: '#D8B47B',
+        transparent: true,
+        opacity: 0.018,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+      volumetricConeMesh = new THREE.Mesh(coneGeom, coneMat);
+      volumetricConeMesh.position.set(0, 2.2, 0);
+      scene.add(volumetricConeMesh);
+    }
+
+    /**
+     * Build the Unified Hero 3D Red Rose (48 Fibonacci Petals, Sepals, Thorns, Leaves & Stem)
+     */
+    function buildHero3DRose() {
+      roseRootGroup = new THREE.Group();
+      roseRootGroup.position.set(0, -1.55, 0);
+      scene.add(roseRootGroup);
+
+      const bumpTex = createVelvetPetalBumpTexture();
+
+      roseMaterial = new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color('#a81733'),
+        vertexColors: true,
+        roughness: 0.6,
+        metalness: 0.04,
+        clearcoat: 0.18,
+        clearcoatRoughness: 0.52,
+        reflectivity: 0.35,
+        bumpMap: bumpTex,
+        bumpScale: 0.008,
+        emissive: new THREE.Color('#280209'),
+        emissiveIntensity: 0.25,
+        side: THREE.DoubleSide
+      });
+
+      foliageMaterial = new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#162a1a'),
+        roughness: 0.55,
+        metalness: 0.08,
+        bumpMap: bumpTex,
+        bumpScale: 0.005,
+        side: THREE.DoubleSide
+      });
+
+      // 1. ARTICULATED 7-SEGMENT STEM
+      const numStemSegments = 7;
+      const segHeight = 0.28;
+      let parentNode = roseRootGroup;
+
+      for (let i = 0; i < numStemSegments; i++) {
+        const joint = new THREE.Group();
+        if (i > 0) joint.position.y = segHeight;
+        parentNode.add(joint);
+
+        const rBottom = 0.048 - i * 0.0022;
+        const rTop = 0.048 - (i + 1) * 0.0022;
+        const cylGeom = new THREE.CylinderGeometry(rTop, rBottom, segHeight + 0.015, 12);
+        cylGeom.translate(0, segHeight * 0.5, 0);
+        const cylMesh = new THREE.Mesh(cylGeom, foliageMaterial);
+        joint.add(cylMesh);
+
+        // Thorns
+        if (i >= 1 && i <= 5) {
+          const thornGeom = new THREE.ConeGeometry(0.022, 0.095, 8);
+          thornGeom.rotateZ(Math.PI * 0.42);
+          const thornMesh = new THREE.Mesh(thornGeom, foliageMaterial);
+          thornMesh.position.set(0, segHeight * 0.55, 0);
+          thornMesh.rotation.y = i * 2.1;
+          thornMesh.translateX(rBottom * 0.9);
+          joint.add(thornMesh);
+        }
+
+        // 3 Compound Serrated Rose Leaves on segments 2, 3, and 4
+        if (i === 2 || i === 3 || i === 4) {
+          const leafBranch = createCompoundRoseLeaf(i);
+          leafBranch.group.position.y = segHeight * 0.65;
+          joint.add(leafBranch.group);
+          leafControllers.push(leafBranch);
+        }
+
+        stemJoints.push({
+          group: joint,
+          wiltRotX: 0.085 + i * 0.036,
+          wiltRotZ: -0.035 - i * 0.02,
+          bloomRotX: i < 3 ? -0.018 : 0.016,
+          bloomRotZ: Math.sin(i * 0.8) * 0.022
+        });
+
+        parentNode = joint;
+      }
+
+      // 2. FLOWER HEAD GROUP AT TOP OF STEM
+      flowerHeadGroup = new THREE.Group();
+      flowerHeadGroup.position.y = segHeight;
+      parentNode.add(flowerHeadGroup);
+
+      const receptacleGeom = new THREE.SphereGeometry(0.14, 16, 12);
+      receptacleGeom.scale(1, 1.18, 1);
+      const receptacleMesh = new THREE.Mesh(receptacleGeom, foliageMaterial);
+      receptacleMesh.position.y = 0.04;
+      flowerHeadGroup.add(receptacleMesh);
+
+      coreRoseLight = new THREE.PointLight('#D8B47B', 0.05, 4.5);
+      coreRoseLight.position.set(0, 0.35, 0);
+      flowerHeadGroup.add(coreRoseLight);
+
+      // 3. FIVE POINTED CALYX SEPALS
+      const sepalGeom = createSerratedLeafGeometry();
+      sepalGeom.scale(0.55, 0.72, 0.6);
+      for (let s = 0; s < 5; s++) {
+        const sepalPivot = new THREE.Group();
+        sepalPivot.rotation.y = (s / 5) * Math.PI * 2 + 0.3;
+        sepalPivot.position.y = 0.06;
+
+        const sepalMesh = new THREE.Mesh(sepalGeom, foliageMaterial);
+        sepalMesh.position.z = 0.09;
+        sepalPivot.add(sepalMesh);
+        flowerHeadGroup.add(sepalPivot);
+
+        sepalControllers.push({
+          mesh: sepalMesh,
+          wiltRotX: 0.65,
+          bloomRotX: 1.85
+        });
+      }
+
+      // 4. 48 LAYERED SPIRAL PETALS (Fibonacci Golden Angle = 137.508 deg)
+      const totalPetals = 48;
+      const goldenAngle = 137.507764 * (Math.PI / 180);
+
+      const tierGeometries = [];
+      for (let t = 0; t < 6; t++) {
+        tierGeometries.push(createSculptedRosePetalGeometry(t / 5, t * 1.37));
+      }
+
+      for (let i = 0; i < totalPetals; i++) {
+        const t = i / (totalPetals - 1); // 0 = innermost core bud, 1 = outermost velvet petals
+        const tierIdx = Math.min(5, Math.floor(t * 6));
+        const geom = tierGeometries[tierIdx];
+
+        const azimuth = i * goldenAngle;
+        const radiusOffset = 0.018 + Math.pow(t, 1.08) * 0.165;
+        const heightOffset = 0.095 - Math.pow(t, 1.3) * 0.055;
+
+        const azimuthGroup = new THREE.Group();
+        azimuthGroup.rotation.y = azimuth;
+        azimuthGroup.position.y = heightOffset;
+
+        const tiltPivot = new THREE.Group();
+        tiltPivot.position.z = radiusOffset;
+        azimuthGroup.add(tiltPivot);
+
+        const petalMesh = new THREE.Mesh(geom, roseMaterial);
+        petalMesh.rotation.y = ((i % 3) - 1) * 0.06;
+        tiltPivot.add(petalMesh);
+
+        flowerHeadGroup.add(azimuthGroup);
+
+        // Wilted petals are folded inward/closed; Bloomed petals unfold gracefully outward
+        const wiltTiltX = -0.35 + Math.pow(t, 1.25) * 0.58;
+        const bloomTiltX = -0.24 + Math.pow(t, 1.16) * 1.38;
+
+        petalControllers.push({
+          index: i,
+          t,
+          tiltPivot,
+          petalMesh,
+          wiltTiltX,
+          bloomTiltX,
+          wiltScale: 0.78 + 0.14 * (1 - t),
+          bloomScale: 1.0
+        });
+      }
+    }
+
+    /**
+     * Creates a 3-leaflet Compound Rose Leaf Branch
+     */
+    function createCompoundRoseLeaf(segmentIndex) {
+      const branchGroup = new THREE.Group();
+      const sideSign = segmentIndex % 2 === 0 ? 1 : -1;
+      branchGroup.rotation.y = sideSign * 1.35 + (segmentIndex - 3) * 0.4;
+
+      const pivotGroup = new THREE.Group();
+      branchGroup.add(pivotGroup);
+
+      const leafletGeom = createSerratedLeafGeometry();
+
+      const centerLeaf = new THREE.Mesh(leafletGeom, foliageMaterial);
+      centerLeaf.position.set(0, 0.18, 0);
+      centerLeaf.rotation.x = 0.35;
+      pivotGroup.add(centerLeaf);
+
+      const leftLeaf = new THREE.Mesh(leafletGeom, foliageMaterial);
+      leftLeaf.scale.setScalar(0.74);
+      leftLeaf.position.set(-0.06, 0.08, 0);
+      leftLeaf.rotation.z = 0.75;
+      leftLeaf.rotation.x = 0.3;
+      pivotGroup.add(leftLeaf);
+
+      const rightLeaf = new THREE.Mesh(leafletGeom, foliageMaterial);
+      rightLeaf.scale.setScalar(0.74);
+      rightLeaf.position.set(0.06, 0.08, 0);
+      rightLeaf.rotation.z = -0.75;
+      rightLeaf.rotation.x = 0.3;
+      pivotGroup.add(rightLeaf);
+
+      return {
+        group: branchGroup,
+        pivot: pivotGroup,
+        wiltRotX: 2.15,  // Drooping downward against stem when wilted
+        bloomRotX: 1.12  // Unfolded outward when bloomed
+      };
+    }
+
+    /**
+     * Smoothly interpolates the 3D Rose between Wilted (p = 0) and Fully Bloomed (p = 1)
+     * Outer petals unfold first, followed organically by middle and inner petals.
+     */
+    function applyRoseBloomState(p) {
+      const clampedP = Math.max(0, Math.min(1, p));
+
+      // 1. Stem straightens early in the bloom sequence
+      const stemEase = THREE.MathUtils.smoothstep(clampedP, 0.0, 0.65);
+      for (let i = 0; i < stemJoints.length; i++) {
+        const sj = stemJoints[i];
+        sj.group.rotation.x = THREE.MathUtils.lerp(sj.wiltRotX, sj.bloomRotX, stemEase);
+        sj.group.rotation.z = THREE.MathUtils.lerp(sj.wiltRotZ, sj.bloomRotZ, stemEase);
+      }
+
+      // 2. Compound leaves unfold
+      const leafEase = THREE.MathUtils.smoothstep(clampedP, 0.08, 0.75);
+      for (let i = 0; i < leafControllers.length; i++) {
+        const lc = leafControllers[i];
+        lc.pivot.rotation.x = THREE.MathUtils.lerp(lc.wiltRotX, lc.bloomRotX, leafEase);
+      }
+
+      // 3. Calyx sepals reflex downward as outer petals open
+      const sepalEase = THREE.MathUtils.smoothstep(clampedP, 0.1, 0.6);
+      for (let i = 0; i < sepalControllers.length; i++) {
+        const sc = sepalControllers[i];
+        sc.mesh.rotation.x = THREE.MathUtils.lerp(sc.wiltRotX, sc.bloomRotX, sepalEase);
+      }
+
+      // 4. Individual Petals: outer petals (t near 1) open first; inner petals (t near 0) follow
+      for (let i = 0; i < petalControllers.length; i++) {
+        const pc = petalControllers[i];
+        const startDelay = (1 - pc.t) * 0.42;
+        const duration = 0.58;
+        const localP = THREE.MathUtils.clamp((clampedP - startDelay) / duration, 0, 1);
+        const smoothLocalP = localP * localP * (3 - 2 * localP);
+
+        pc.tiltPivot.rotation.x = THREE.MathUtils.lerp(pc.wiltTiltX, pc.bloomTiltX, smoothLocalP);
+        const s = THREE.MathUtils.lerp(pc.wiltScale, pc.bloomScale, smoothLocalP);
+        pc.petalMesh.scale.setScalar(s);
+      }
+
+      // 5. Velvet crimson richness & inner golden heart glow
+      if (roseMaterial) {
+        const wiltTint = new THREE.Color('#660b1d');
+        const bloomTint = new THREE.Color('#b81d3c');
+        roseMaterial.color.lerpColors(wiltTint, bloomTint, clampedP);
+        roseMaterial.emissiveIntensity = 0.22 + clampedP * 0.28;
+      }
+      if (coreRoseLight) {
+        coreRoseLight.intensity = 0.08 + Math.pow(clampedP, 1.5) * 1.65;
+      }
+    }
+
+    function setRoseSceneVisibility(alpha) {
+      roseAnimState.roseVisibility = alpha;
+      if (roseRootGroup) {
+        roseRootGroup.visible = alpha > 0.01;
+        roseRootGroup.scale.setScalar(0.88 + 0.12 * alpha);
+      }
+    }
+
+    /**
+     * =========================================================================
+     * ATMOSPHERIC GOLDEN DUST & DISTANT STARFIELD
+     * =========================================================================
+     */
+    function buildAtmosphericParticles() {
+      const glowTex = createGlowParticleTexture('#ffffff', '#D8B47B');
+
+      // 1. Floating Golden Dust Particles
+      const dustCount = isMobileDevice ? 260 : 480;
+      const dustGeom = new THREE.BufferGeometry();
+      const dustPos = new Float32Array(dustCount * 3);
+      const dustPhase = new Float32Array(dustCount);
+
+      for (let i = 0; i < dustCount; i++) {
+        dustPos[i * 3] = (Math.random() - 0.5) * 16;
+        dustPos[i * 3 + 1] = (Math.random() - 0.5) * 12;
+        dustPos[i * 3 + 2] = (Math.random() - 0.5) * 16;
+        dustPhase[i] = Math.random() * Math.PI * 2;
+      }
+
+      dustGeom.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+      dustGeom.setAttribute('aPhase', new THREE.BufferAttribute(dustPhase, 1));
+
+      const dustMat = new THREE.PointsMaterial({
+        map: glowTex,
+        color: '#D8B47B',
+        size: isMobileDevice ? 0.14 : 0.11,
+        transparent: true,
+        opacity: 0.65,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+
+      goldDustPoints = new THREE.Points(dustGeom, dustMat);
+      scene.add(goldDustPoints);
+
+      // 2. Subtle Distant Stars
+      const starCount = isMobileDevice ? 300 : 600;
+      const starGeom = new THREE.BufferGeometry();
+      const starPos = new Float32Array(starCount * 3);
+
+      for (let i = 0; i < starCount; i++) {
+        const r = 14 + Math.random() * 24;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        starPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+        starPos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+        starPos[i * 3 + 2] = r * Math.cos(phi);
+      }
+
+      starGeom.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+      const starMat = new THREE.PointsMaterial({
+        map: glowTex,
+        color: '#F3E9DC',
+        size: 0.12,
+        transparent: true,
+        opacity: 0.35,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+
+      starFieldPoints = new THREE.Points(starGeom, starMat);
+      scene.add(starFieldPoints);
+    }
+
+    /**
+     * =========================================================================
+     * SCENE 3: MAGICAL GOLDEN LIGHT ORB & PARTICLE TRAIL
+     * =========================================================================
+     */
+    function buildGoldenLightOrb() {
+      orbGroup = new THREE.Group();
+      orbGroup.position.copy(orbBasePos);
+      orbGroup.visible = false;
+      orbGroup.scale.setScalar(0.001);
+      scene.add(orbGroup);
+
+      // Glowing core sphere (also acts as generous raycast hit target)
+      const coreGeom = new THREE.SphereGeometry(0.11, 24, 24);
+      const coreMat = new THREE.MeshBasicMaterial({
+        color: '#fff9eb'
+      });
+      orbCoreMesh = new THREE.Mesh(coreGeom, coreMat);
+      orbGroup.add(orbCoreMesh);
+
+      // Invisible larger hit sphere for effortless mobile tap & mouse click
+      const hitGeom = new THREE.SphereGeometry(0.55, 12, 12);
+      const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+      const hitMesh = new THREE.Mesh(hitGeom, hitMat);
+      hitMesh.name = 'ORB_HIT_TARGET';
+      orbGroup.add(hitMesh);
+
+      // Soft golden halo sprite
+      const haloTex = createGlowParticleTexture('#ffffff', '#D8B47B');
+      const haloMat = new THREE.SpriteMaterial({
+        map: haloTex,
+        color: '#D8B47B',
+        transparent: true,
+        opacity: 0.92,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      orbHaloSprite = new THREE.Sprite(haloMat);
+      orbHaloSprite.scale.set(0.95, 0.95, 1);
+      orbGroup.add(orbHaloSprite);
+
+      orbLight = new THREE.PointLight('#D8B47B', 2.2, 6.5);
+      orbGroup.add(orbLight);
+
+      // Golden Particle Trail following the Orb
+      const trailCount = 36;
+      const trailGeom = new THREE.BufferGeometry();
+      const trailPos = new Float32Array(trailCount * 3);
+      for (let i = 0; i < trailCount; i++) {
+        trailPos[i * 3] = orbBasePos.x;
+        trailPos[i * 3 + 1] = orbBasePos.y;
+        trailPos[i * 3 + 2] = orbBasePos.z;
+        orbTrailHistory.push(orbBasePos.clone());
+      }
+      trailGeom.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
+
+      const trailMat = new THREE.PointsMaterial({
+        map: haloTex,
+        color: '#D8B47B',
+        size: 0.16,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+      orbTrailPoints = new THREE.Points(trailGeom, trailMat);
+      scene.add(orbTrailPoints);
+    }
+
+    /**
+     * =========================================================================
+     * SCENE 5: 3D PARTICLE "11:11" FLOATING DIGITAL CLOCK
+     * Samples thin, elegant "11:11" numerals on an offscreen canvas and creates
+     * a 3D golden particle constellation that converges in mid-air above the rose.
+     * =========================================================================
+     */
+    function build1111ParticleClock() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 180;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '300 118px "Cormorant Garamond", Georgia, serif';
+      ctx.fillText('1 1 : 1 1', canvas.width / 2, canvas.height / 2);
+
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      const sampledPoints = [];
+      const step = isMobileDevice ? 3 : 2;
+
+      for (let y = 0; y < canvas.height; y += step) {
+        for (let x = 0; x < canvas.width; x += step) {
+          const alpha = imgData[(y * canvas.width + x) * 4];
+          if (alpha > 110) {
+            const wx = ((x / canvas.width) - 0.5) * 3.5;
+            const wy = (0.5 - (y / canvas.height)) * 1.22 + 1.55;
+            const wz = (Math.random() - 0.5) * 0.08;
+            sampledPoints.push(wx, wy, wz);
+          }
+        }
+      }
+
+      const numPoints = sampledPoints.length / 3;
+      clock1111Geometry = new THREE.BufferGeometry();
+      const currentPositions = new Float32Array(numPoints * 3);
+      clockTargetPositions = new Float32Array(sampledPoints);
+      clockScatterPositions = new Float32Array(numPoints * 3);
+
+      for (let i = 0; i < numPoints; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = 2.0 + Math.random() * 3.5;
+        clockScatterPositions[i * 3] = Math.cos(angle) * radius;
+        clockScatterPositions[i * 3 + 1] = 1.4 + (Math.random() - 0.5) * 2.8;
+        clockScatterPositions[i * 3 + 2] = Math.sin(angle) * radius;
+
+        currentPositions[i * 3] = clockScatterPositions[i * 3];
+        currentPositions[i * 3 + 1] = clockScatterPositions[i * 3 + 1];
+        currentPositions[i * 3 + 2] = clockScatterPositions[i * 3 + 2];
+      }
+
+      clock1111Geometry.setAttribute('position', new THREE.BufferAttribute(currentPositions, 3));
+
+      const glowTex = createGlowParticleTexture('#ffffff', '#D8B47B');
+      const clockMat = new THREE.PointsMaterial({
+        map: glowTex,
+        color: '#D8B47B',
+        size: isMobileDevice ? 0.075 : 0.058,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+
+      clock1111Points = new THREE.Points(clock1111Geometry, clockMat);
+      scene.add(clock1111Points);
+    }
+
+    /**
+     * =========================================================================
+     * SCENE 4, 5 & 6: INSTANCED SWARM OF 650+ 3D RED ROSE PETALS
+     * Orbits in a spiral during Scenes 4–5 and morphs into a glowing 3D Heart
+     * around the central bloomed rose in Scene 6.
+     * =========================================================================
+     */
+    function buildInstancedPetalSwarm() {
+      // Single lightweight curved 3D petal geometry for instancing
+      const singlePetalGeom = createSculptedRosePetalGeometry(0.75, 0.5);
+      singlePetalGeom.scale(0.22, 0.22, 0.22);
+
+      const swarmMat = new THREE.MeshStandardMaterial({
+        color: '#B21F3B',
+        roughness: 0.5,
+        metalness: 0.06,
+        emissive: '#4a0615',
+        emissiveIntensity: 0.45,
+        side: THREE.DoubleSide
+      });
+
+      petalSwarmMesh = new THREE.InstancedMesh(singlePetalGeom, swarmMat, SWARM_COUNT);
+      petalSwarmMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      scene.add(petalSwarmMesh);
+
+      for (let i = 0; i < SWARM_COUNT; i++) {
+        // Parametric 3D Heart Target Coordinates surrounding the rose
+        const t = (i / SWARM_COUNT) * Math.PI * 2;
+        // Classic heart curve: x = 16 sin^3(t), y = 13 cos(t) - 5 cos(2t) - 2 cos(3t) - cos(4t)
+        const hx = 16 * Math.pow(Math.sin(t), 3);
+        const hy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+
+        // Give volumetric 3D thickness and shell layering to the heart
+        const shellLayer = (Math.random() - 0.5) * 0.42;
+        const radialSpread = 0.88 + Math.random() * 0.24;
+        const heartScale = 0.098;
+
+        const targetHeartPos = new THREE.Vector3(
+          hx * heartScale * radialSpread,
+          (hy * heartScale * radialSpread) + 0.52,
+          shellLayer
+        );
+
+        swarmData.push({
+          orbitAngle: Math.random() * Math.PI * 2,
+          orbitRadius: 1.6 + Math.random() * 3.8,
+          orbitHeight: -1.4 + Math.random() * 4.2,
+          orbitSpeed: 0.25 + Math.random() * 0.55,
+          bobPhase: Math.random() * Math.PI * 2,
+          rotSpeedX: (Math.random() - 0.5) * 2.2,
+          rotSpeedY: (Math.random() - 0.5) * 2.2,
+          rotSpeedZ: (Math.random() - 0.5) * 2.2,
+          scale: 0.65 + Math.random() * 0.65,
+          targetHeartPos
+        });
+      }
+    }
+
+    /**
+     * =========================================================================
+     * TYPOGRAPHY & HUD HELPERS
+     * =========================================================================
+     */
+    const captionEl = document.getElementById('story-caption');
+    let captionTween = null;
+
+    function showCinematicCaption(text, holdDuration = 3.2) {
+      if (captionTween) captionTween.kill();
+
+      captionEl.innerHTML = '';
+      if (!text) return;
+
+      // Split into words and characters for letter-by-letter reveal without breaking words across lines
+      const words = text.split(' ');
+      words.forEach((word, wIdx) => {
+        const wordWrap = document.createElement('span');
+        wordWrap.style.display = 'inline-block';
+        wordWrap.style.whiteSpace = 'nowrap';
+
+        for (let c = 0; c < word.length; c++) {
+          const chSpan = document.createElement('span');
+          chSpan.className = 'char-span';
+          chSpan.textContent = word[c];
+          wordWrap.appendChild(chSpan);
+        }
+        captionEl.appendChild(wordWrap);
+
+        if (wIdx < words.length - 1) {
+          const spaceSpan = document.createElement('span');
+          spaceSpan.innerHTML = '&nbsp;';
+          spaceSpan.style.display = 'inline-block';
+          captionEl.appendChild(spaceSpan);
+        }
+      });
+
+      const chars = captionEl.querySelectorAll('.char-span');
+      const tl = gsap.timeline();
+      captionTween = tl;
+
+      tl.to(chars, {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        filter: 'blur(0px)',
+        duration: isReducedMotion ? 0.3 : 0.75,
+        stagger: isReducedMotion ? 0.008 : 0.026,
+        ease: 'power3.out'
+      });
+
+      if (holdDuration > 0) {
+        tl.to(chars, {
+          opacity: 0,
+          y: -6,
+          filter: 'blur(3px)',
+          duration: 0.7,
+          stagger: 0.01,
+          ease: 'power2.in'
+        }, `+=${holdDuration}`);
+      }
+
+      return tl;
+    }
+
+    function clearCinematicCaption() {
+      if (captionTween) captionTween.kill();
+      const chars = captionEl.querySelectorAll('.char-span');
+      if (chars.length) {
+        gsap.to(chars, { opacity: 0, duration: 0.4, onComplete: () => { captionEl.innerHTML = ''; } });
+      } else {
+        captionEl.innerHTML = '';
+      }
+    }
+
+    function updateChapterHUD(sceneNum) {
+      currentSceneIndex = sceneNum;
+      const meta = CHAPTER_META[sceneNum - 1] || CHAPTER_META[0];
+      document.getElementById('chapter-number-label').textContent = meta.num;
+      document.getElementById('chapter-title-label').textContent = meta.title;
+
+      const dots = document.querySelectorAll('.chapter-dot');
+      dots.forEach((dot) => {
+        const s = parseInt(dot.getAttribute('data-scene'), 10);
+        dot.classList.toggle('active', s === sceneNum);
+        dot.classList.toggle('completed', s < sceneNum);
+      });
+    }
+
+    /**
+     * =========================================================================
+     * SIX-SCENE MASTER CINEMATIC STORY CONTROLLER (GSAP TIMELINES)
+     * =========================================================================
+     */
+    function resetAllSceneOverlays() {
+      if (activeTimeline) activeTimeline.kill();
+      clearCinematicCaption();
+      isWaitingForOrbTouch = false;
+      orbFlightActive = false;
+
+      document.getElementById('scene3-interaction-layer').classList.add('opacity-0', 'invisible');
+      document.getElementById('clock-1111-overlay').classList.add('opacity-0');
+      document.getElementById('final-message-card').classList.remove('visible');
+    }
+
+    /**
+     * SCENE 1 — THE FORGOTTEN WORLD
+     */
+    function playScene1() {
+      resetAllSceneOverlays();
+      updateChapterHUD(1);
+
+      // Reset world state to dark & mysterious
+      setRoseSceneVisibility(0);
+      applyRoseBloomState(0);
+      gsap.set(swarmState, { activeAlpha: 0, heartMorph: 0, vortexSpeed: 1.0 });
+      gsap.set(clockGatherState, { progress: 0, opacity: 0 });
+      clock1111Points.material.opacity = 0;
+      orbGroup.visible = false;
+      orbTrailPoints.material.opacity = 0;
+      document.getElementById('ambient-bloom-overlay').style.opacity = '0';
+      soundEngine.setWorldWarmth(0.0);
+
+      gsap.set(keySpotLight, { intensity: 0.15 });
+      gsap.set(crimsonRimLight, { intensity: 0.0 });
+      gsap.set(goldFillLight, { intensity: 0.1 });
+      gsap.set(volumetricConeMesh.material, { opacity: 0.01 });
+
+      // Position camera far back in the dark void
+      gsap.set(camRig, {
+        angle: -0.35,
+        radius: isMobileDevice ? 8.8 : 7.6,
+        height: 1.1,
+        lookX: 0,
+        lookY: 0.35,
+        lookZ: 0,
+        autoOrbitSpeed: 0.04
+      });
+
+      const tl = gsap.timeline();
+      activeTimeline = tl;
+
+      // Slowly dolly camera forward through floating golden dust
+      tl.to(camRig, {
+        radius: isMobileDevice ? 6.2 : 5.1,
+        height: 0.65,
+        angle: -0.1,
+        duration: 10.5,
+        ease: 'sine.inOut'
+      }, 0);
+
+      tl.to(keySpotLight, { intensity: 1.1, duration: 5.0, ease: 'power2.inOut' }, 0.5);
+      tl.to(volumetricConeMesh.material, { opacity: 0.028, duration: 5.0 }, 0.5);
+
+      // First Caption
+      tl.call(() => {
+        showCinematicCaption('Once upon a time, the world was full of flowers...', 2.8);
+      }, null, 0.8);
+
+      // Second Caption
+      tl.call(() => {
+        showCinematicCaption('Until one day, they all disappeared.', 2.8);
+      }, null, 5.6);
+
+      // Transition into Scene 2
+      tl.call(() => {
+        playScene2();
+      }, null, 10.4);
+    }
+
+    /**
+     * SCENE 2 — THE LAST ROSE
+     */
+    function playScene2() {
+      resetAllSceneOverlays();
+      updateChapterHUD(2);
+
+      applyRoseBloomState(0); // Wilted pose
+      setRoseSceneVisibility(0);
+      gsap.set(swarmState, { activeAlpha: 0, heartMorph: 0 });
+      gsap.set(clockGatherState, { progress: 0, opacity: 0 });
+      clock1111Points.material.opacity = 0;
+      orbGroup.visible = false;
+      orbTrailPoints.material.opacity = 0;
+
+      const tl = gsap.timeline();
+      activeTimeline = tl;
+
+      // Fade in the wilted rose under narrow dramatic studio spotlight
+      tl.to(roseAnimState, {
+        roseVisibility: 1,
+        duration: 2.4,
+        ease: 'power2.out',
+        onUpdate: () => setRoseSceneVisibility(roseAnimState.roseVisibility)
+      }, 0);
+
+      tl.to(keySpotLight, { intensity: 3.2, duration: 2.5, ease: 'power2.out' }, 0);
+      tl.to(crimsonRimLight, { intensity: 1.8, duration: 2.5 }, 0.3);
+      tl.to(goldFillLight, { intensity: 0.9, duration: 2.5 }, 0.3);
+
+      // Camera slowly orbits and approaches the fragile wilted flower
+      tl.to(camRig, {
+        radius: isMobileDevice ? 4.3 : 3.35,
+        height: 0.45,
+        angle: 0.42,
+        lookY: 0.3,
+        duration: 6.8,
+        ease: 'power2.inOut'
+      }, 0);
+
+      tl.call(() => {
+        showCinematicCaption('But one flower refused to disappear.', 3.4);
+      }, null, 1.1);
+
+      tl.call(() => {
+        playScene3();
+      }, null, 6.8);
+    }
+
+    /**
+     * SCENE 3 — A TOUCH OF LIFE (Interactive Golden Light Orb)
+     */
+    function playScene3() {
+      resetAllSceneOverlays();
+      updateChapterHUD(3);
+
+      setRoseSceneVisibility(1);
+      applyRoseBloomState(0);
+
+      // Introduce Golden Light Orb near the wilted rose
+      orbGroup.visible = true;
+      orbGroup.position.copy(orbBasePos);
+      orbGroup.scale.setScalar(0.01);
+      orbTrailPoints.material.opacity = 0.72;
+
+      soundEngine.playOrbAppearChime();
+
+      const tl = gsap.timeline();
+      activeTimeline = tl;
+
+      tl.to(orbGroup.scale, {
+        x: 1,
+        y: 1,
+        z: 1,
+        duration: 1.4,
+        ease: 'back.out(1.7)'
+      }, 0);
+
+      tl.to(camRig, {
+        radius: isMobileDevice ? 4.1 : 3.2,
+        height: 0.5,
+        angle: 0.55,
+        lookX: 0.25,
+        lookY: 0.38,
+        duration: 2.2,
+        ease: 'power2.out'
+      }, 0);
+
+      tl.call(() => {
+        isWaitingForOrbTouch = true;
+        const promptLayer = document.getElementById('scene3-interaction-layer');
+        promptLayer.classList.remove('opacity-0', 'invisible');
+      }, null, 0.8);
+    }
+
+    /**
+     * Triggered when the visitor clicks/taps "TOUCH THE LIGHT" or the 3D Golden Orb
+     */
+    function triggerOrbTouchInteraction() {
+      if (!isWaitingForOrbTouch || orbFlightActive) return;
+      isWaitingForOrbTouch = false;
+      orbFlightActive = true;
+
+      soundEngine.init();
+      soundEngine.playBloomSparkle();
+
+      // Hide button prompt immediately
+      const promptLayer = document.getElementById('scene3-interaction-layer');
+      promptLayer.classList.add('opacity-0', 'invisible');
+
+      // Animate the orb arcing gracefully into the heart of the rose
+      const startPos = orbGroup.position.clone();
+      const targetPos = new THREE.Vector3(0, 0.42, 0);
+      const flightObj = { t: 0 };
+
+      const tl = gsap.timeline({
+        onComplete: () => {
+          orbFlightActive = false;
+          orbGroup.visible = false;
+          gsap.to(orbTrailPoints.material, { opacity: 0, duration: 0.8 });
+          playScene4();
+        }
+      });
+      activeTimeline = tl;
+
+      tl.to(flightObj, {
+        t: 1,
+        duration: 1.65,
+        ease: 'power2.inOut',
+        onUpdate: () => {
+          const u = flightObj.t;
+          // Parabolic arc into the rose bud
+          orbGroup.position.lerpVectors(startPos, targetPos, u);
+          orbGroup.position.y += Math.sin(u * Math.PI) * 0.45;
+          orbGroup.position.z += Math.sin(u * Math.PI) * 0.35;
+        }
+      }, 0);
+
+      // Flash golden light as the orb merges with the rose
+      tl.to(orbLight, { intensity: 6.5, distance: 10, duration: 0.5, yoyo: true, repeat: 1 }, 1.15);
+      tl.to(orbGroup.scale, { x: 0.05, y: 0.05, z: 0.05, duration: 0.4, ease: 'power2.in' }, 1.25);
+      tl.to(coreRoseLight, { intensity: 2.8, duration: 0.6 }, 1.2);
+    }
+
+    /**
+     * SCENE 4 — THE BLOOM
+     */
+    function playScene4() {
+      resetAllSceneOverlays();
+      updateChapterHUD(4);
+
+      setRoseSceneVisibility(1);
+      orbGroup.visible = false;
+      document.getElementById('ambient-bloom-overlay').style.opacity = '1';
+      soundEngine.setWorldWarmth(1.0);
+
+      const tl = gsap.timeline();
+      activeTimeline = tl;
+
+      // 1. Organic blooming of stem, leaves, sepals, and 48 layered petals
+      tl.fromTo(roseAnimState,
+        { bloomProgress: 0 },
+        {
+          bloomProgress: 1,
+          duration: 7.5,
+          ease: 'power2.inOut',
+          onUpdate: () => applyRoseBloomState(roseAnimState.bloomProgress)
+        },
+        0
+      );
+
+      // 2. Introduce swirling 3D crimson petals & warm illumination
+      tl.to(swarmState, {
+        activeAlpha: 1,
+        heartMorph: 0,
+        vortexSpeed: 1.1,
+        duration: 3.0,
+        ease: 'power2.out'
+      }, 0.8);
+
+      tl.to(keySpotLight, { intensity: 4.2, duration: 3.5 }, 0);
+      tl.to(crimsonRimLight, { intensity: 3.4, duration: 3.5 }, 0);
+      tl.to(goldFillLight, { intensity: 2.1, duration: 3.5 }, 0);
+      tl.to(volumetricConeMesh.material, { opacity: 0.05, duration: 3.5 }, 0);
+
+      // 3. Sweeping cinematic macro close-up around the blooming rose
+      tl.to(camRig, {
+        radius: isMobileDevice ? 3.3 : 2.45,
+        height: 0.72,
+        angle: 2.35,
+        lookX: 0,
+        lookY: 0.42,
+        lookZ: 0,
+        duration: 8.8,
+        ease: 'sine.inOut'
+      }, 0);
+
+      tl.call(() => {
+        showCinematicCaption('Somewhere, someone makes the world bloom again.', 4.0);
+      }, null, 2.2);
+
+      tl.call(() => {
+        playScene5();
+      }, null, 9.0);
+    }
+
+    /**
+     * SCENE 5 — THE 11:11 MOMENT
+     */
+    function playScene5() {
+      resetAllSceneOverlays();
+      updateChapterHUD(5);
+
+      setRoseSceneVisibility(1);
+      applyRoseBloomState(1);
+      gsap.set(swarmState, { activeAlpha: 1, heartMorph: 0, vortexSpeed: 0.85 });
+
+      soundEngine.play1111Bell();
+
+      const tl = gsap.timeline();
+      activeTimeline = tl;
+
+      // Darken surroundings slightly while keeping the bloomed rose & 11:11 glowing
+      tl.to(keySpotLight, { intensity: 2.4, duration: 2.5 }, 0);
+      tl.to(volumetricConeMesh.material, { opacity: 0.025, duration: 2.5 }, 0);
+
+      // Frame both the bloomed rose and the floating 11:11 particle clock above it
+      tl.to(camRig, {
+        radius: isMobileDevice ? 5.2 : 4.15,
+        height: 0.85,
+        angle: 3.14,
+        lookX: 0,
+        lookY: 0.82,
+        lookZ: 0,
+        duration: 4.2,
+        ease: 'power2.inOut'
+      }, 0);
+
+      // Converge thousands of golden particles into "11:11"
+      tl.fromTo(clockGatherState,
+        { progress: 0, opacity: 0 },
+        {
+          progress: 1,
+          opacity: 0.95,
+          duration: 3.2,
+          ease: 'power3.out',
+          onUpdate: update1111ClockParticles
+        },
+        0.4
+      );
+
+      tl.call(() => {
+        document.getElementById('clock-1111-overlay').classList.remove('opacity-0');
+      }, null, 1.6);
+
+      tl.call(() => {
+        showCinematicCaption("Make a wish. It's 11:11.", 3.6);
+      }, null, 1.8);
+
+      // Disperse 11:11 particles gracefully into Scene 6 Finale
+      tl.to(clockGatherState, {
+        opacity: 0,
+        progress: 0.25,
+        duration: 1.6,
+        ease: 'power2.in',
+        onUpdate: update1111ClockParticles,
+        onComplete: () => {
+          document.getElementById('clock-1111-overlay').classList.add('opacity-0');
+        }
+      }, 6.6);
+
+      tl.call(() => {
+        playScene6();
+      }, null, 8.0);
+    }
+
+    function update1111ClockParticles() {
+      if (!clock1111Points || !clock1111Geometry) return;
+      clock1111Points.material.opacity = clockGatherState.opacity;
+
+      const posAttr = clock1111Geometry.attributes.position;
+      const arr = posAttr.array;
+      const p = clockGatherState.progress;
+
+      for (let i = 0; i < arr.length; i++) {
+        arr[i] = THREE.MathUtils.lerp(clockScatterPositions[i], clockTargetPositions[i], p);
+      }
+      posAttr.needsUpdate = true;
+    }
+
+    /**
+     * SCENE 6 — THE FINAL GIFT (3D Rose Petal Heart Formation & Personal Reveal)
+     */
+    function playScene6() {
+      resetAllSceneOverlays();
+      updateChapterHUD(6);
+
+      setRoseSceneVisibility(1);
+      applyRoseBloomState(1);
+      document.getElementById('ambient-bloom-overlay').style.opacity = '1';
+
+      soundEngine.playFinalHeartSwell();
+
+      const tl = gsap.timeline();
+      activeTimeline = tl;
+
+      // Pull camera back to frame the full 3D Heart of 650+ Rose Petals with the Hero Rose in the center
+      tl.to(camRig, {
+        radius: isMobileDevice ? 7.2 : 5.65,
+        height: 0.55,
+        angle: Math.PI * 2,
+        lookX: 0,
+        lookY: 0.32,
+        lookZ: 0,
+        autoOrbitSpeed: 0.045,
+        duration: 4.5,
+        ease: 'power3.inOut'
+      }, 0);
+
+      tl.to(keySpotLight, { intensity: 4.0, duration: 3.0 }, 0);
+      tl.to(crimsonRimLight, { intensity: 3.8, duration: 3.0 }, 0);
+      tl.to(goldFillLight, { intensity: 2.5, duration: 3.0 }, 0);
+
+      // Morph the 650+ swirling 3D petals into the glowing 3D Heart formation
+      tl.to(swarmState, {
+        activeAlpha: 1,
+        heartMorph: 1,
+        vortexSpeed: 0.4,
+        duration: 4.2,
+        ease: 'power3.inOut'
+      }, 0.2);
+
+      // Reveal the Personalized Final Message Card
+      tl.call(() => {
+        applyPersonalizationToDOM();
+        document.getElementById('final-message-card').classList.add('visible');
+      }, null, 3.3);
+    }
+
+    /**
+     * =========================================================================
+     * REAL-TIME RENDER LOOP (60fps)
+     * =========================================================================
+     */
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const elapsed = clock.getElapsedTime();
+      const motionFactor = isReducedMotion ? 0.2 : 1.0;
+
+      // 1. Smooth Pointer Parallax
+      smoothPointer.x += (pointer.x - smoothPointer.x) * 0.05;
+      smoothPointer.y += (pointer.y - smoothPointer.y) * 0.05;
+
+      // 2. Update Camera Orbit & Subtle Parallax
+      camRig.angle += 0.0012 * camRig.autoOrbitSpeed * motionFactor;
+      const camX = Math.sin(camRig.angle) * camRig.radius + smoothPointer.x * 0.38 * motionFactor;
+      const camZ = Math.cos(camRig.angle) * camRig.radius;
+      const camY = camRig.height + smoothPointer.y * 0.26 * motionFactor;
+
+      camera.position.set(camX, camY, camZ);
+      camera.lookAt(camRig.lookX, camRig.lookY, camRig.lookZ);
+
+      // 3. Gentle Organic Breathing of the Hero 3D Rose
+      if (roseRootGroup && roseRootGroup.visible) {
+        roseRootGroup.rotation.y = Math.sin(elapsed * 0.35) * 0.08 * motionFactor;
+        roseRootGroup.rotation.z = Math.cos(elapsed * 0.45) * 0.018 * motionFactor;
+      }
+
+      // 4. Update Floating Golden Dust Particles
+      if (goldDustPoints) {
+        goldDustPoints.rotation.y = elapsed * 0.025 * motionFactor;
+        const posAttr = goldDustPoints.geometry.attributes.position;
+        const phases = goldDustPoints.geometry.attributes.aPhase.array;
+        for (let i = 0; i < phases.length; i++) {
+          posAttr.array[i * 3 + 1] += Math.sin(elapsed * 0.8 + phases[i]) * 0.0015 * motionFactor;
+        }
+        posAttr.needsUpdate = true;
+      }
+
+      // 5. Update Interactive Golden Light Orb & Trail (Scene 3)
+      if (orbGroup && orbGroup.visible) {
+        if (!orbFlightActive) {
+          orbGroup.position.x = orbBasePos.x + Math.sin(elapsed * 1.6) * 0.14 + smoothPointer.x * 0.28;
+          orbGroup.position.y = orbBasePos.y + Math.cos(elapsed * 2.1) * 0.12 + smoothPointer.y * 0.22;
+          orbGroup.position.z = orbBasePos.z + Math.sin(elapsed * 1.2) * 0.1;
+        }
+        const pulse = 0.9 + Math.sin(elapsed * 5.0) * 0.14;
+        orbHaloSprite.scale.set(pulse, pulse, 1);
+
+        // Update trailing golden particles behind the orb
+        orbTrailHistory.pop();
+        orbTrailHistory.unshift(orbGroup.position.clone());
+        const trailAttr = orbTrailPoints.geometry.attributes.position;
+        for (let i = 0; i < orbTrailHistory.length; i++) {
+          const p = orbTrailHistory[i];
+          trailAttr.array[i * 3] = p.x + Math.sin(elapsed * 3 + i) * 0.015;
+          trailAttr.array[i * 3 + 1] = p.y + Math.cos(elapsed * 2.5 + i) * 0.015;
+          trailAttr.array[i * 3 + 2] = p.z;
+        }
+        trailAttr.needsUpdate = true;
+      }
+
+      // 6. Update Instanced 3D Red Rose Petals (Spiral Vortex -> 3D Heart Formation)
+      if (petalSwarmMesh) {
+        const alpha = swarmState.activeAlpha;
+        petalSwarmMesh.visible = alpha > 0.01;
+
+        if (petalSwarmMesh.visible) {
+          const morph = swarmState.heartMorph;
+          const heartRotY = Math.sin(elapsed * 0.35) * 0.22 * motionFactor;
+          const cosH = Math.cos(heartRotY);
+          const sinH = Math.sin(heartRotY);
+
+          for (let i = 0; i < SWARM_COUNT; i++) {
+            const d = swarmData[i];
+            d.orbitAngle += 0.008 * d.orbitSpeed * swarmState.vortexSpeed * motionFactor;
+
+            // Spiral vortex coordinates
+            const vx = Math.cos(d.orbitAngle) * d.orbitRadius;
+            const vz = Math.sin(d.orbitAngle) * d.orbitRadius;
+            const vy = d.orbitHeight + Math.sin(elapsed * 1.2 + d.bobPhase) * 0.22;
+
+            // Rotated 3D Heart coordinates
+            const hxBase = d.targetHeartPos.x + Math.sin(elapsed * 1.8 + d.bobPhase) * 0.035;
+            const hyBase = d.targetHeartPos.y + Math.cos(elapsed * 1.5 + d.bobPhase) * 0.035;
+            const hzBase = d.targetHeartPos.z;
+
+            const hx = hxBase * cosH - hzBase * sinH;
+            const hz = hxBase * sinH + hzBase * cosH;
+            const hy = hyBase;
+
+            swarmDummy.position.set(
+              THREE.MathUtils.lerp(vx, hx, morph),
+              THREE.MathUtils.lerp(vy, hy, morph),
+              THREE.MathUtils.lerp(vz, hz, morph)
+            );
+
+            swarmDummy.rotation.set(
+              elapsed * d.rotSpeedX * motionFactor + i,
+              elapsed * d.rotSpeedY * motionFactor + i * 0.5,
+              elapsed * d.rotSpeedZ * motionFactor
+            );
+
+            const s = d.scale * alpha * (1 - 0.15 * morph);
+            swarmDummy.scale.setScalar(s);
+            swarmDummy.updateMatrix();
+            petalSwarmMesh.setMatrixAt(i, swarmDummy.matrix);
+          }
+          petalSwarmMesh.instanceMatrix.needsUpdate = true;
+        }
+      }
+
+      if (renderer && scene && camera) {
+        renderer.render(scene, camera);
+      }
+    }
+
+    /**
+     * =========================================================================
+     * POINTER, RAYCASTER & RESIZE HANDLERS
+     * =========================================================================
+     */
+    function onPointerMove(e) {
+      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+      if (isWaitingForOrbTouch && orbGroup && orbGroup.visible) {
+        raycaster.setFromCamera(pointer, camera);
+        const hits = raycaster.intersectObjects(orbGroup.children, true);
+        document.body.style.cursor = hits.length > 0 ? 'pointer' : 'default';
+      } else {
+        document.body.style.cursor = 'default';
+      }
+    }
+
+    function onCanvasPointerDown(e) {
+      if (!isWaitingForOrbTouch || !orbGroup || !orbGroup.visible) return;
+      const clickVec = new THREE.Vector2(
+        (e.clientX / window.innerWidth) * 2 - 1,
+        -(e.clientY / window.innerHeight) * 2 + 1
+      );
+      raycaster.setFromCamera(clickVec, camera);
+      const hits = raycaster.intersectObjects(orbGroup.children, true);
+      if (hits.length > 0) {
+        triggerOrbTouchInteraction();
+      }
+    }
+
+    function onWindowResize() {
+      if (!camera || !renderer) return;
+      const isPortrait = window.innerWidth < window.innerHeight;
+      camera.fov = isPortrait ? 52 : 40;
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    /**
+     * =========================================================================
+     * PERSONALIZATION & UI EVENT BINDINGS
+     * =========================================================================
+     */
+    function applyPersonalizationToDOM() {
+      const badgeEl = document.getElementById('final-recipient-badge');
+      const headlineEl = document.getElementById('final-headline-text');
+      const letterEl = document.getElementById('final-custom-letter');
+      const subtextEl = document.getElementById('final-subtext-text');
+      const loadingPreviewEl = document.getElementById('loading-recipient-preview');
+
+      if (GIFT_CONFIG.recipientName && GIFT_CONFIG.recipientName.trim() !== '') {
+        badgeEl.textContent = GIFT_CONFIG.recipientName.trim();
+        loadingPreviewEl.textContent = `Created especially for ${GIFT_CONFIG.recipientName.trim()}`;
+        loadingPreviewEl.classList.remove('hidden');
+      } else {
+        badgeEl.textContent = '';
+        loadingPreviewEl.classList.add('hidden');
+      }
+
+      const rawHeadline = (GIFT_CONFIG.finalHeadline || 'You are the reason this world blooms.').trim();
+      headlineEl.textContent = rawHeadline.startsWith('"') ? rawHeadline : `"${rawHeadline}"`;
+
+      if (GIFT_CONFIG.personalNote && GIFT_CONFIG.personalNote.trim() !== '') {
+        letterEl.textContent = GIFT_CONFIG.personalNote.trim();
+        letterEl.classList.remove('hidden');
+      } else {
+        letterEl.classList.add('hidden');
+      }
+
+      subtextEl.textContent = (GIFT_CONFIG.finalSubtext || 'Happy 11:11 ❤️').trim();
+    }
+
+    function setupUIInteractions() {
+      applyPersonalizationToDOM();
+
+      // 1. Enter Story Button
+      document.getElementById('btn-enter-story').addEventListener('click', () => {
+        soundEngine.init();
+        document.getElementById('loading-screen').classList.add('hidden-screen');
+        playScene1();
+      });
+
+      // 2. Scene 3 "TOUCH THE LIGHT" Button
+      document.getElementById('btn-touch-light').addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerOrbTouchInteraction();
+      });
+
+      // 3. Final "WATCH AGAIN" & Top HUD "Replay" Buttons
+      const replayHandler = () => {
+        soundEngine.init();
+        playScene1();
+      };
+      document.getElementById('btn-watch-again').addEventListener('click', replayHandler);
+      document.getElementById('btn-hud-replay').addEventListener('click', replayHandler);
+
+      // 4. Sound Mute / Unmute Toggle
+      const soundBtn = document.getElementById('btn-sound-toggle');
+      const soundLabel = document.getElementById('sound-label');
+      soundBtn.addEventListener('click', () => {
+        const muted = soundEngine.toggleMute();
+        soundBtn.classList.toggle('sound-playing', !muted);
+        soundLabel.textContent = muted ? 'Muted' : 'Sound On';
+      });
+
+      // 5. Reduced Motion Toggle
+      const motionBtn = document.getElementById('btn-motion-toggle');
+      const motionLabel = document.getElementById('motion-label');
+      motionBtn.addEventListener('click', () => {
+        isReducedMotion = !isReducedMotion;
+        motionLabel.textContent = isReducedMotion ? 'Motion: Low' : 'Motion: Full';
+      });
+
+      // 6. Chapter Progress Dots Navigation
+      document.querySelectorAll('.chapter-dot').forEach((dot) => {
+        dot.addEventListener('click', () => {
+          soundEngine.init();
+          const targetScene = parseInt(dot.getAttribute('data-scene'), 10);
+          if (targetScene === 1) playScene1();
+          else if (targetScene === 2) playScene2();
+          else if (targetScene === 3) playScene3();
+          else if (targetScene === 4) playScene4();
+          else if (targetScene === 5) playScene5();
+          else if (targetScene === 6) playScene6();
+        });
+      });
+
+      // 7. Personalize Gift Modal Controls
+      const modal = document.getElementById('personalize-modal');
+      const inputRecipient = document.getElementById('input-recipient');
+      const inputHeadline = document.getElementById('input-headline');
+      const inputLetter = document.getElementById('input-letter');
+      const inputSubtext = document.getElementById('input-subtext');
+
+      document.getElementById('btn-open-personalize').addEventListener('click', () => {
+        inputRecipient.value = GIFT_CONFIG.recipientName;
+        inputHeadline.value = GIFT_CONFIG.finalHeadline;
+        inputLetter.value = GIFT_CONFIG.personalNote;
+        inputSubtext.value = GIFT_CONFIG.finalSubtext;
+        modal.classList.remove('opacity-0', 'invisible');
+      });
+
+      document.getElementById('btn-close-modal').addEventListener('click', () => {
+        modal.classList.add('opacity-0', 'invisible');
+      });
+
+      document.getElementById('btn-save-personalize').addEventListener('click', () => {
+        GIFT_CONFIG.recipientName = inputRecipient.value.trim();
+        GIFT_CONFIG.finalHeadline = inputHeadline.value.trim() || 'You are the reason this world blooms.';
+        GIFT_CONFIG.personalNote = inputLetter.value.trim();
+        GIFT_CONFIG.finalSubtext = inputSubtext.value.trim() || 'Happy 11:11 ❤️';
+        applyPersonalizationToDOM();
+        modal.classList.add('opacity-0', 'invisible');
+      });
+
+      document.getElementById('btn-copy-share-link').addEventListener('click', () => {
+        const params = new URLSearchParams();
+        if (inputRecipient.value.trim()) params.set('to', inputRecipient.value.trim());
+        if (inputHeadline.value.trim()) params.set('msg', inputHeadline.value.trim());
+        if (inputLetter.value.trim()) params.set('note', inputLetter.value.trim());
+        if (inputSubtext.value.trim()) params.set('sub', inputSubtext.value.trim());
+
+        const shareUrl = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+        const tempInput = document.createElement('textarea');
+        tempInput.value = shareUrl;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+
+        const copyLabel = document.getElementById('copy-link-label');
+        copyLabel.textContent = 'Link Copied ✓';
+        setTimeout(() => {
+          copyLabel.textContent = 'Copy Share Link';
+        }, 2200);
+      });
+    }
+
+    /**
+     * =========================================================================
+     * BOOTSTRAP & LOADING SEQUENCE
+     * =========================================================================
+     */
+    window.onload = function () {
+      const barFill = document.getElementById('loading-bar-fill');
+      const statusText = document.getElementById('loading-status-text');
+      const enterContainer = document.getElementById('enter-btn-container');
+
+      barFill.style.width = '35%';
+      initThreeScene();
+      setupUIInteractions();
+      animate();
+
+      setTimeout(() => {
+        barFill.style.width = '78%';
+        statusText.textContent = 'Aligning 11:11 Celestial Particles...';
+      }, 350);
+
+      setTimeout(() => {
+        barFill.style.width = '100%';
+        statusText.textContent = 'Experience Ready';
+        enterContainer.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
+      }, 800);
+    };
+  </script>
+</body>
+</html>
