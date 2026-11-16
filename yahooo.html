@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Bday Cake Bakery 🎂</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #18121e;
+      --cabinet-pink: #f28482;
+      --cabinet-cream: #fde8a5;
+      --pixel-border: #3d2622;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #161019;
+      background-image: 
+        radial-gradient(circle at 50% 20%, #2c1d30 0%, #120c14 85%);
+      font-family: 'Cairo', sans-serif;
+      touch-action: none;
+      overscroll-behavior: none;
+    }
+
+    .pixel-font {
+      font-family: 'Press Start 2P', 'Cairo', monospace;
+    }
+
+    .retro-font {
+      font-family: 'VT323', 'Cairo', monospace;
+    }
+
+    /* Crisp Pixel Art Canvas */
+    #gameCanvas {
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -webkit-crisp-edges;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background-color: #000;
+    }
+
+    /* Retro Window Frame matching the Godot window in the video */
+    .game-window-frame {
+      border: 4px solid #3d2622;
+      box-shadow: 
+        0 12px 35px rgba(0, 0, 0, 0.65),
+        0 0 0 2px #fde8a5 inset;
+      background: #000;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .window-titlebar {
+      background: linear-gradient(90deg, #2d232e 0%, #3d2d3f 100%);
+      border-bottom: 2px solid #3d2622;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      direction: ltr;
+    }
+
+    .traffic-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    /* Tactile Arcade Buttons for iPhone */
+    .arcade-btn {
+      position: relative;
+      background: #fff5e4;
+      border: 4px solid #3d2622;
+      box-shadow: 0 6px 0 #3d2622, 0 8px 15px rgba(0,0,0,0.4);
+      border-radius: 18px;
+      transition: transform 0.05s ease, box-shadow 0.05s ease, background-color 0.05s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #3d2622;
+      cursor: pointer;
+      touch-action: none;
+    }
+
+    .arcade-btn:active,
+    .arcade-btn.pressed {
+      transform: translateY(5px);
+      box-shadow: 0 1px 0 #3d2622, 0 2px 6px rgba(0,0,0,0.3);
+      background: #fde8a5;
+    }
+
+    .arcade-btn-jump {
+      background: #f28482;
+      color: #fff5e4;
+    }
+
+    .arcade-btn-jump:active,
+    .arcade-btn-jump.pressed {
+      background: #e0533c;
+    }
+
+    /* Allow selection inside modal inputs */
+    .modal-input {
+      -webkit-user-select: text !important;
+      user-select: text !important;
+      touch-action: manipulation !important;
+    }
+
+    @media (orientation: landscape) and (max-height: 540px) {
+      .window-titlebar {
+        display: none;
+      }
+      .top-toolbar {
+        padding-top: 4px !important;
+        padding-bottom: 4px !important;
+      }
+    }
+  </style>
+</head>
+<body class="flex flex-col justify-between items-center h-full w-full select-none overflow-hidden">
+
+  <!-- =====================================================================
+       TOP BAR: Audio, Customize Button & Hints
+       ===================================================================== -->
+  <header class="top-toolbar w-full max-w-2xl px-3 pt-2 pb-1 flex items-center justify-between z-20 shrink-0">
+    <div class="flex items-center gap-2">
+      <button id="audioToggleBtn" class="px-3 py-1.5 rounded-xl bg-[#2c1f30] border-2 border-[#fde8a5]/40 text-[#fde8a5] text-xs sm:text-sm font-bold flex items-center gap-1.5 active:scale-95 transition">
+        <span id="audioIcon">🔊</span>
+        <span id="audioText">الصوت</span>
+      </button>
+
+      <button id="resetSceneBtn" class="px-2.5 py-1.5 rounded-xl bg-[#2c1f30] border-2 border-[#f28482]/40 text-[#fcd5ce] text-xs sm:text-sm font-bold active:scale-95 transition" title="إعادة من البداية">
+        🔄 البداية
+      </button>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <!-- Customize button (Auto-hidden when ?gift=1 is in URL, or can be opened anytime by creator) -->
+      <button id="openCustomModalBtn" class="px-3 py-1.5 rounded-xl bg-[#e0533c] border-2 border-[#fde8a5] text-[#fff5e4] text-xs sm:text-sm font-bold shadow-md flex items-center gap-1.5 active:scale-95 transition">
+        <span>⚙️</span>
+        <span>تخصيص الاسم والرسالة</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- =====================================================================
+       MAIN GAME MONITOR (4:3 Retro Pixel Aspect Ratio like the Godot Video)
+       ===================================================================== -->
+  <main class="w-full flex-1 flex flex-col items-center justify-center px-2 sm:px-4 min-h-0">
+    <div class="game-window-frame w-full max-w-[680px] flex flex-col" style="aspect-ratio: 4 / 3; max-height: 100%;">
+      <!-- macOS / Godot Debug Window Titlebar from the video -->
+      <div class="window-titlebar shrink-0">
+        <div class="flex items-center gap-1.5">
+          <span class="traffic-dot bg-[#ff5f56]"></span>
+          <span class="traffic-dot bg-[#ffbd2e]"></span>
+          <span class="traffic-dot bg-[#27c93f]"></span>
+        </div>
+        <div id="windowTitleText" class="text-[10px] sm:text-xs text-[#fde8a5]/90 font-mono tracking-wide truncate">
+          bday-cake-bakery (DEBUG)
+        </div>
+        <div class="text-[10px] text-[#f28482] font-mono">🎂 60 FPS</div>
+      </div>
+
+      <!-- Pixel Art Canvas Container -->
+      <div class="relative flex-1 w-full h-full bg-black overflow-hidden">
+        <canvas id="gameCanvas" width="320" height="240"></canvas>
+      </div>
+    </div>
+  </main>
+
+  <!-- =====================================================================
+       BOTTOM IPHONE TOUCH CONTROLS (Multi-touch D-Pad + Jump/Action)
+       ===================================================================== -->
+  <section id="touchControlsBar" class="w-full max-w-2xl px-4 pt-2 pb-5 sm:pb-6 flex flex-col gap-2 z-20 shrink-0">
+    <!-- Context helper banner -->
+    <div id="touchHelperLabel" class="text-center text-xs sm:text-sm text-[#fde8a5]/90 font-semibold tracking-wide">
+      حرّكي الشخصية لليمين لدخول المخبز 🏠✨
+    </div>
+
+    <div class="w-full flex items-center justify-between gap-4">
+      <!-- Left / Right D-Pad -->
+      <div class="flex items-center gap-3" dir="ltr">
+        <button id="btnLeft" class="arcade-btn w-16 h-14 sm:w-20 sm:h-16 select-none" aria-label="Left">
+          <svg class="w-8 h-8 fill-current" viewBox="0 0 24 24">
+            <path d="M15 5l-8 7 8 7V5z"/>
+          </svg>
+        </button>
+        <button id="btnRight" class="arcade-btn w-16 h-14 sm:w-20 sm:h-16 select-none" aria-label="Right">
+          <svg class="w-8 h-8 fill-current" viewBox="0 0 24 24">
+            <path d="M9 5l8 7-8 7V5z"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Jump / Action / Blow Candles Button -->
+      <div class="flex items-center gap-2">
+        <button id="btnJump" class="arcade-btn arcade-btn-jump px-6 h-14 sm:px-8 sm:h-16 font-extrabold text-base sm:text-lg tracking-wider flex items-center gap-2 select-none">
+          <span id="jumpBtnLabel">قفز / JUMP</span>
+          <span class="text-xl">⬆️</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =====================================================================
+       CUSTOMIZATION & SHARE LINK MODAL
+       ===================================================================== -->
+  <div id="customModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-[#251b28] border-4 border-[#fde8a5] rounded-2xl max-w-md w-full p-5 text-[#fff5e4] shadow-2xl max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-[#fde8a5]/20 pb-3 mb-4">
+        <h2 class="text-lg font-extrabold text-[#fde8a5] flex items-center gap-2">
+          <span>🎂</span>
+          <span>تخصيص اللعبة لصديقتك</span>
+        </h2>
+        <button id="closeCustomModalBtn" class="w-8 h-8 rounded-lg bg-[#3d2622] text-[#fde8a5] font-bold flex items-center justify-center">✕</button>
+      </div>
+
+      <div class="space-y-3 text-sm">
+        <div>
+          <label class="block text-[#fcd5ce] font-bold mb-1">اسم صاحبة عيد الميلاد:</label>
+          <input id="inputFriendName" type="text" class="modal-input w-full px-3 py-2 rounded-xl bg-[#161019] border-2 border-[#f28482]/60 text-white focus:border-[#fde8a5] outline-none" placeholder="مثال: سارة / Sara" />
+        </div>
+
+        <div>
+          <label class="block text-[#fcd5ce] font-bold mb-1">الرسالة الرئيسية تحت الكعكة (تظهر حرفاً بحرف):</label>
+          <input id="inputHeadline" type="text" class="modal-input w-full px-3 py-2 rounded-xl bg-[#161019] border-2 border-[#f28482]/60 text-white focus:border-[#fde8a5] outline-none" placeholder="مثال: happy birthday to my best friend" />
+          <p class="text-[11px] text-[#fde8a5]/70 mt-1">تقبل اللغة العربية أو الإنجليزية (بنفس ستايل الفيديو).</p>
+        </div>
+
+        <div>
+          <label class="block text-[#fcd5ce] font-bold mb-1">رسالة التهنئة الإضافية (تحت العنوان):</label>
+          <textarea id="inputSubMessage" rows="2" class="modal-input w-full px-3 py-2 rounded-xl bg-[#161019] border-2 border-[#f28482]/60 text-white focus:border-[#fde8a5] outline-none" placeholder="مثال: كل عام وأنتِ أجمل صديقة في العالم! 💖"></textarea>
+        </div>
+
+        <div class="pt-2 flex flex-col gap-2">
+          <button id="saveCustomBtn" class="w-full py-2.5 rounded-xl bg-[#e0533c] hover:bg-[#f28482] text-white font-extrabold border-2 border-[#fde8a5] shadow-lg active:scale-98 transition">
+            ✅ حفظ وتجربة في اللعبة الآن
+          </button>
+
+          <button id="copyGiftLinkBtn" class="w-full py-2.5 rounded-xl bg-[#2a9d8f] hover:bg-[#21867a] text-white font-extrabold border-2 border-[#fde8a5] shadow-lg active:scale-98 transition flex items-center justify-center gap-2">
+            <span>🔗</span>
+            <span>نسخ رابط هدية لصديقتك (يخفي زر الإعدادات)</span>
+          </button>
+
+          <div id="copyFeedback" class="hidden text-center text-xs font-bold text-[#90be6d] bg-[#161019] py-2 px-3 rounded-lg border border-[#90be6d]/40">
+            تم نسخ الرابط! عندما تفتحه صديقتك ستظهر لها اللعبة مباشرة بدون زر التخصيص 🎁
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+       🎂 1. إعدادات عيد الميلاد (يمكنك تعديل الاسم والرسالة هنا مباشرة في الكود!)
+       ========================================================================= */
+    const BIRTHDAY_CONFIG = {
+      friendName: "سارة",
+      // العنوان الرئيسي الذي يظهر تحت كعكة الميلاد في الشاشة السوداء (مثل الفيديو)
+      headlineMessage: "happy birthday to آيتي☁️!",
+      // الرسالة الإضافية التي تظهر تحت العنوان
+      subMessage: "☁️كل عام وانتي بالف الف خير يويايتي🤎❤️😊💕😘😘😘😘😘😘😘😘😘",
+      // عنوان نافذة اللعبة
+      bakeryTitle: "Bday Cake Bakery"
+    };
+
+    // قراءة الإعدادات من الرابط إذا تم إرساله كهدية أو من التخزين المحلي
+    (function loadCustomConfig() {
+      const params = new URLSearchParams(window.location.search);
+      const saved = localStorage.getItem('bday_bakery_custom_v1');
+      if (saved && !params.has('name') && !params.has('msg')) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.friendName) BIRTHDAY_CONFIG.friendName = parsed.friendName;
+          if (parsed.headlineMessage) BIRTHDAY_CONFIG.headlineMessage = parsed.headlineMessage;
+          if (parsed.subMessage !== undefined) BIRTHDAY_CONFIG.subMessage = parsed.subMessage;
+        } catch (e) {}
+      }
+      if (params.get('name')) BIRTHDAY_CONFIG.friendName = params.get('name');
+      if (params.get('msg')) BIRTHDAY_CONFIG.headlineMessage = params.get('msg');
+      if (params.get('sub')) BIRTHDAY_CONFIG.subMessage = params.get('sub');
+
+      // إذا كان الرابط يحتوي على gift=1، نخفي زر التخصيص حتى تكون مفاجأة كاملة لصديقتك
+      if (params.get('gift') === '1') {
+        const btn = document.getElementById('openCustomModalBtn');
+        if (btn) btn.style.display = 'none';
+      }
+    })();
+
+    /* =========================================================================
+       🎵 2. محرك الصوت 8-Bit (Web Audio API Synthesizer - بدون ملفات خارجية)
+       ========================================================================= */
+    class RetroAudio {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+        this.melodyTimer = null;
+        this.isPlayingBirthdaySong = false;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) {
+            this.ctx = new AudioCtx();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playTone(freq, duration = 0.12, type = 'square', vol = 0.08, slideTo = null) {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, now);
+          if (slideTo) {
+            osc.frequency.exponentialRampToValueAtTime(slideTo, now + duration);
+          }
+
+          gain.gain.setValueAtTime(vol, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + duration);
+        } catch (e) {}
+      }
+
+      jump() {
+        this.playTone(280, 0.14, 'square', 0.07, 580);
+      }
+
+      collectCake() {
+        this.playTone(587.33, 0.08, 'triangle', 0.11);
+        setTimeout(() => this.playTone(880, 0.16, 'triangle', 0.11), 65);
+      }
+
+      enterDoor() {
+        this.playTone(330, 0.09, 'square', 0.07);
+        setTimeout(() => this.playTone(440, 0.09, 'square', 0.07), 80);
+        setTimeout(() => this.playTone(659.25, 0.18, 'square', 0.08), 160);
+      }
+
+      hurt() {
+        this.playTone(190, 0.22, 'sawtooth', 0.09, 95);
+      }
+
+      blowCandles() {
+        this.playTone(523.25, 0.09, 'triangle', 0.1);
+        setTimeout(() => this.playTone(659.25, 0.09, 'triangle', 0.1), 80);
+        setTimeout(() => this.playTone(783.99, 0.09, 'triangle', 0.1), 160);
+        setTimeout(() => this.playTone(1046.5, 0.28, 'triangle', 0.12), 240);
+      }
+
+      startBirthdayMelody() {
+        this.stopBirthdayMelody();
+        this.isPlayingBirthdaySong = true;
+
+        // نوتات أغنية Happy Birthday to You بنمط 8-bit لطيف
+        const notes = [
+          { f: 261.63, d: 260 }, { f: 261.63, d: 220 }, { f: 293.66, d: 450 }, { f: 261.63, d: 450 }, { f: 349.23, d: 450 }, { f: 329.63, d: 800 },
+          { f: 261.63, d: 260 }, { f: 261.63, d: 220 }, { f: 293.66, d: 450 }, { f: 261.63, d: 450 }, { f: 392.00, d: 450 }, { f: 349.23, d: 800 },
+          { f: 261.63, d: 260 }, { f: 261.63, d: 220 }, { f: 523.25, d: 450 }, { f: 440.00, d: 450 }, { f: 349.23, d: 450 }, { f: 329.63, d: 450 }, { f: 293.66, d: 750 },
+          { f: 466.16, d: 260 }, { f: 466.16, d: 220 }, { f: 440.00, d: 450 }, { f: 349.23, d: 450 }, { f: 392.00, d: 450 }, { f: 349.23, d: 900 }
+        ];
+
+        let idx = 0;
+        const playNext = () => {
+          if (!this.isPlayingBirthdaySong) return;
+          const n = notes[idx];
+          if (!this.muted) {
+            this.playTone(n.f, (n.d / 1000) * 0.85, 'triangle', 0.08);
+            // نغمة مصاحبة خفيفة
+            this.playTone(n.f * 0.5, (n.d / 1000) * 0.7, 'sine', 0.04);
+          }
+          idx = (idx + 1) % notes.length;
+          const delay = idx === 0 ? 1400 : n.d;
+          this.melodyTimer = setTimeout(playNext, delay);
+        };
+
+        playNext();
+      }
+
+      stopBirthdayMelody() {
+        this.isPlayingBirthdaySong = false;
+        if (this.melodyTimer) {
+          clearTimeout(this.melodyTimer);
+          this.melodyTimer = null;
+        }
+      }
+    }
+
+    const sfx = new RetroAudio();
+
+    /* =========================================================================
+       🕹️ 3. إعداد اللوحة (Canvas 320x240 Pixel Art) وحالة المشاهد الثلاثة
+       ========================================================================= */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = 320;
+    const H = 240;
+
+    // المشاهد الثلاثة المطابقة للفيديو:
+    // 'exterior' -> خارج المخبز (00:00 - 00:02 و 00:29)
+    // 'inside'   -> داخل المخبز وجمع الكعك (00:03 - 00:09)
+    // 'finale'   -> شاشة الكعكة السوداء والاحتفال (00:10 - 00:28)
+    let currentScene = 'exterior';
+    let sceneTransitionAlpha = 0;
+    let transitioningTo = null;
+    let globalTick = 0;
+
+    // حالة أزرار التحكم (كيبورد + لمس آيفون)
+    const keys = {
+      left: false,
+      right: false,
+      jump: false,
+      jumpJustPressed: false
+    };
+
+    // اللاعب (الشخصية البيضاء اللطيفة ذات الخدود الوردية)
+    const player = {
+      x: 34,
+      y: 160,
+      w: 16,
+      h: 18,
+      vx: 0,
+      vy: 0,
+      speed: 1.55,
+      jumpForce: -4.9,
+      gravity: 0.23,
+      grounded: false,
+      facing: 1, // 1 يمين، -1 يسار
+      animTimer: 0,
+      invincibleTimer: 0
+    };
+
+    // بيانات مشهد خارج المخبز (Scene 1)
+    const exteriorClouds = [
+      { x: 18, y: 24, w: 68, h: 24, speed: 0.12 },
+      { x: 122, y: 16, w: 54, h: 20, speed: 0.09 },
+      { x: 215, y: 26, w: 76, h: 26, speed: 0.14 }
+    ];
+
+    // بيانات مشهد داخل المخبز (Scene 2)
+    const LEVEL_WIDTH = 780;
+    let cameraX = 0;
+    let score = 0;
+    let collectedCount = 0;
+    const totalCupcakes = 10;
+    let hearts = 3;
+    let checkpointBannerTimer = 180; // يظهر "Checkpoint saved" في بداية المرحلة مثل الفيديو 00:03
+    let collectPopups = []; // تأثيرات +15 عند جمع كعكة
+
+    // المنصات داخل المخبز (مطابقة لألوان وتوزيع الفيديو 00:03 - 00:09)
+    const platforms = [
+      // الأرضية الرئيسية
+      { x: 0, y: 196, w: LEVEL_WIDTH, h: 44, isGround: true },
+      // المنصات العائمة
+      { x: 75, y: 154, w: 64, h: 12 },
+      { x: 168, y: 124, w: 68, h: 12 },
+      { x: 262, y: 154, w: 72, h: 12 },
+      { x: 358, y: 120, w: 68, h: 12 },
+      { x: 452, y: 150, w: 72, h: 12 },
+      { x: 548, y: 122, w: 66, h: 12 }
+    ];
+
+    // مواقع الكعكات الـ 10 (Cupcakes)
+    let cupcakes = [];
+    // الكائنات اللطيفة المتحركة (Bakery Critters)
+    let critters = [];
+
+    // موقع طاولة كعكة عيد الميلاد النهائية في أقصى اليمين (مثل الثانية 00:08-00:09)
+    const grandCakeGoal = {
+      tableX: 665,
+      tableY: 166,
+      tableW: 64,
+      tableH: 30,
+      cakeX: 683,
+      cakeY: 138,
+      cakeW: 28,
+      cakeH: 28
+    };
+
+    // بيانات المشهد الثالث (Scene 3: Finale Celebration)
+    let finaleState = {
+      timer: 0,
+      typedChars: 0,
+      candlesLit: true,
+      smokePuffs: [],
+      confetti: [],
+      showButtons: false,
+      restartBtnRect: { x: 86, y: 204, w: 68, h: 20 },
+      exitBtnRect: { x: 166, y: 204, w: 68, h: 20 },
+      cakeHitbox: { x: 110, y: 45, w: 100, h: 95 }
+    };
+
+    /* =========================================================================
+       🔄 4. تهيئة المشاهد والانتقال بينها
+       ========================================================================= */
+    function initExteriorScene() {
+      currentScene = 'exterior';
+      sfx.stopBirthdayMelody();
+      player.x = 36;
+      player.y = 166;
+      player.vx = 0;
+      player.vy = 0;
+      player.facing = 1;
+      player.grounded = true;
+      updateHelperText();
+    }
+
+    function initInsideScene() {
+      currentScene = 'inside';
+      sfx.stopBirthdayMelody();
+      player.x = 28;
+      player.y = 166;
+      player.vx = 0;
+      player.vy = 0;
+      player.facing = 1;
+      player.invincibleTimer = 0;
+      cameraX = 0;
+      score = 0;
+      collectedCount = 0;
+      hearts = 3;
+      checkpointBannerTimer = 190;
+      collectPopups = [];
+
+      // توزيع 10 كعكات (كل واحدة تعطي 15 نقطة = 150 نقطة، أو 130+ حسب الجمع مثل الفيديو)
+      cupcakes = [
+        { x: 98,  y: 136, collected: false, bobOffset: 0 },
+        { x: 138, y: 176, collected: false, bobOffset: 1.2 },
+        { x: 194, y: 106, collected: false, bobOffset: 2.1 },
+        { x: 242, y: 176, collected: false, bobOffset: 3.0 },
+        { x: 290, y: 136, collected: false, bobOffset: 0.7 },
+        { x: 384, y: 102, collected: false, bobOffset: 1.8 },
+        { x: 430, y: 176, collected: false, bobOffset: 2.5 },
+        { x: 480, y: 132, collected: false, bobOffset: 3.6 },
+        { x: 572, y: 104, collected: false, bobOffset: 4.2 },
+        { x: 625, y: 176, collected: false, bobOffset: 5.0 }
+      ];
+
+      // كائنات المخبز اللطيفة (كما في الثانية 00:04 على المنصة)
+      critters = [
+        { x: 275, y: 142, w: 14, h: 12, minX: 264, maxX: 318, vx: 0.45 },
+        { x: 470, y: 138, w: 14, h: 12, minX: 454, maxX: 508, vx: -0.5 }
+      ];
+
+      updateHelperText();
+    }
+
+    function initFinaleScene() {
+      currentScene = 'finale';
+      finaleState.timer = 0;
+      finaleState.typedChars = 0;
+      finaleState.candlesLit = true;
+      finaleState.smokePuffs = [];
+      finaleState.confetti = [];
+      finaleState.showButtons = false;
+
+      sfx.startBirthdayMelody();
+      updateHelperText();
+    }
+
+    function transitionToScene(targetScene) {
+      if (transitioningTo) return;
+      transitioningTo = targetScene;
+    }
+
+    function spawnConfettiBurst(count = 55, originY = null) {
+      const colors = ['#ff4d6d', '#fde8a5', '#4cc9f0', '#72efdd', '#f77f00', '#b5179e', '#90be6d', '#ffffff'];
+      for (let i = 0; i < count; i++) {
+        finaleState.confetti.push({
+          x: Math.random() * W,
+          y: originY !== null ? originY : (Math.random() * H * 0.7),
+          vx: (Math.random() - 0.5) * 2.2,
+          vy: (Math.random() - 0.6) * 2.0 - 0.4,
+          size: Math.random() > 0.4 ? 3 : 2,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          life: 240 + Math.random() * 180
+        });
+      }
+    }
+
+    function blowOutCandlesInteraction() {
+      if (currentScene !== 'finale') return;
+      if (finaleState.candlesLit) {
+        finaleState.candlesLit = false;
+        sfx.blowCandles();
+        spawnConfettiBurst(75, 70);
+        // دخان لطيف فوق الشموع الثلاث
+        const candleXs = [150, 160, 170];
+        candleXs.forEach(cx => {
+          for (let i = 0; i < 4; i++) {
+            finaleState.smokePuffs.push({
+              x: cx + (Math.random() - 0.5) * 4,
+              y: 52,
+              vy: -0.4 - Math.random() * 0.4,
+              vx: (Math.random() - 0.5) * 0.4,
+              alpha: 1,
+              size: 2 + Math.floor(Math.random() * 2)
+            });
+          }
+        });
+      } else {
+        // إعادة إشعال الشموع وإطلاق قصاصات إضافية عند الضغط مرة أخرى
+        finaleState.candlesLit = true;
+        sfx.collectCake();
+        spawnConfettiBurst(45);
+      }
+      updateHelperText();
+    }
+
+    function updateHelperText() {
+      const label = document.getElementById('touchHelperLabel');
+      const jumpLabel = document.getElementById('jumpBtnLabel');
+      if (!label || !jumpLabel) return;
+
+      if (currentScene === 'exterior') {
+        label.textContent = 'حرّكي الشخصية لليمين ◀ ▶ لدخول المخبز 🏠🎂';
+        jumpLabel.textContent = 'قفز / ادخل';
+      } else if (currentScene === 'inside') {
+        label.textContent = 'اجمعي قطع الكعك العشر 🧁 ثم اتجهي لكعكة الميلاد الكبيرة في النهاية! ✨';
+        jumpLabel.textContent = 'قفز / JUMP';
+      } else if (currentScene === 'finale') {
+        if (finaleState.candlesLit) {
+          label.textContent = 'اضغطي على الكعكة أو زر (انفخ الشموع) لإطفاء الشموع والاحتفال! 🕯️🎉';
+          jumpLabel.textContent = 'انفخي الشموع 🕯️';
+        } else {
+          label.textContent = '🎉 عيد ميلاد سعيد! يمكنك الضغط على restart للعب مجدداً أو exit للخروج 🎉';
+          jumpLabel.textContent = 'احتفال 🎉';
+        }
+      }
+    }
+
+    /* =========================================================================
+       🎨 5. دوال الرسم بالـ Pixel Art (مطابقة لتفاصيل الفيديو)
+       ========================================================================= */
+    function drawPixelRect(x, y, w, h, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+    }
+
+    // رسم السحب المنفوخة (شهد 1)
+    function drawFluffyCloud(x, y, w, h) {
+      const rx = Math.round(x);
+      const ry = Math.round(y);
+      // ظل وحدود بنية ناعمة مثل الفيديو
+      drawPixelRect(rx + 4, ry + 2, w - 8, h - 2, '#d89c7a');
+      drawPixelRect(rx + 2, ry + 5, w - 4, h - 6, '#d89c7a');
+      // جسم السحابة الكريمي
+      drawPixelRect(rx + 5, ry + 3, w - 10, h - 4, '#fff8dc');
+      drawPixelRect(rx + 3, ry + 6, w - 6, h - 8, '#fff8dc');
+      drawPixelRect(rx + 10, ry + 1, w - 22, h - 3, '#fff8dc');
+      // لمعة علوية
+      drawPixelRect(rx + 12, ry + 2, w - 26, 2, '#ffffff');
+    }
+
+    // رسم الشخصية البيضاء اللطيفة (مع أذنين صغيرتين، خدود وردية، وفيونكة حمراء)
+    function drawPlayer(px, py, facing, animTimer, isGrounded) {
+      if (player.invincibleTimer > 0 && Math.floor(player.invincibleTimer / 4) % 2 === 1) {
+        return; // وميض عند لمس كائن
+      }
+
+      const x = Math.round(px);
+      const y = Math.round(py);
+      const walkBounce = isGrounded && Math.abs(player.vx) > 0.1 ? Math.sin(animTimer * 0.35) * 1.5 : 0;
+      const by = Math.round(y + walkBounce);
+
+      // ظل تحت الشخصية
+      drawPixelRect(x + 3, y + 16, 10, 2, 'rgba(61, 38, 34, 0.28)');
+
+      // الأذنان الصغيرتان في الأعلى
+      drawPixelRect(x + 2, by, 3, 3, '#5e3a32');
+      drawPixelRect(x + 11, by, 3, 3, '#5e3a32');
+      drawPixelRect(x + 3, by + 1, 2, 2, '#fff9f2');
+      drawPixelRect(x + 11, by + 1, 2, 2, '#fff9f2');
+
+      // فيونكة عيد ميلاد صغيرة لطيفة على الرأس
+      drawPixelRect(x + 6, by, 4, 2, '#e0533c');
+      drawPixelRect(x + 7, by + 1, 2, 1, '#fde8a5');
+
+      // الحدود الخارجية للجسم الدائري
+      drawPixelRect(x + 2, by + 2, 12, 12, '#5e3a32');
+      drawPixelRect(x + 1, by + 4, 14, 9, '#5e3a32');
+
+      // الجسم الأبيض الكريمي
+      drawPixelRect(x + 3, by + 3, 10, 10, '#fff9f2');
+      drawPixelRect(x + 2, by + 4, 12, 8, '#fff9f2');
+
+      // تظليل سفلي ناعم
+      drawPixelRect(x + 3, by + 11, 10, 2, '#f3e1d3');
+
+      // العيون والخدود الوردية حسب اتجاه الحركة
+      const eyeOffset = facing >= 0 ? 1 : -1;
+      drawPixelRect(x + 5 + eyeOffset, by + 6, 2, 2, '#3d2622');
+      drawPixelRect(x + 10 + eyeOffset, by + 6, 2, 2, '#3d2622');
+
+      // الخدود الوردية
+      drawPixelRect(x + 3 + eyeOffset, by + 8, 2, 2, '#f28482');
+      drawPixelRect(x + 11 + eyeOffset, by + 8, 2, 2, '#f28482');
+
+      // الأقدام المتحركة
+      const legStep = isGrounded && Math.abs(player.vx) > 0.1 ? Math.round(Math.sin(animTimer * 0.4) * 2) : 0;
+      drawPixelRect(x + 4, y + 14 + (legStep > 0 ? -1 : 0), 3, 3, '#5e3a32');
+      drawPixelRect(x + 9, y + 14 + (legStep < 0 ? -1 : 0), 3, 3, '#5e3a32');
+    }
+
+    // رسم مشهد 1: خارج المخبز (مطابق للثواني 00:00 - 00:02 من الفيديو)
+    function drawExteriorScene() {
+      // 1. السماء الصفراء الدافئة
+      drawPixelRect(0, 0, W, H, '#fde8a5');
+
+      // 2. السحب المتحركة
+      exteriorClouds.forEach(c => {
+        drawFluffyCloud(c.x, c.y, c.w, c.h);
+      });
+
+      // 3. الأشجار الخلفية على اليسار والوسط
+      // شجرة اليسار الكبيرة
+      drawPixelRect(14, 140, 8, 44, '#8c583a');
+      drawPixelRect(4, 62, 34, 82, '#69995d');
+      drawPixelRect(0, 74, 42, 62, '#84b067');
+      drawPixelRect(8, 68, 24, 34, '#9ec47c');
+
+      // شجيرات خلفية ناعمة
+      drawPixelRect(40, 148, 52, 36, '#9ec47c');
+      drawPixelRect(46, 142, 40, 12, '#b5d692');
+      drawPixelRect(110, 134, 48, 50, '#84b067');
+      drawPixelRect(116, 126, 36, 20, '#9ec47c');
+
+      // 4. عمودا الإنارة الكلاسيكيان (في الفيديو عند اليسار والوسط)
+      [58, 124].forEach(lx => {
+        drawPixelRect(lx, 96, 3, 88, '#4a3531');
+        drawPixelRect(lx - 3, 94, 9, 3, '#4a3531');
+        drawPixelRect(lx - 2, 87, 7, 7, '#fff3b0');
+        drawPixelRect(lx - 3, 85, 9, 2, '#4a3531');
+      });
+
+      // 5. شمسية المقهى الوردية والطاولة والكراسي (يسار المشهد)
+      const umbX = 68;
+      const umbY = 126;
+      // عمود الشمسية والطاولة
+      drawPixelRect(umbX + 21, umbY + 14, 2, 44, '#5e3a32');
+      drawPixelRect(umbX + 10, 169, 24, 3, '#fff5e4');
+      drawPixelRect(umbX + 10, 172, 24, 2, '#5e3a32');
+      drawPixelRect(umbX + 20, 174, 4, 10, '#5e3a32');
+      // كرسيان
+      drawPixelRect(umbX + 3, 166, 5, 18, '#a86b4c');
+      drawPixelRect(umbX + 36, 166, 5, 18, '#a86b4c');
+      // مظلة الشمسية المخططة (وردي وأبيض)
+      for (let i = 0; i < 6; i++) {
+        const stripeColor = i % 2 === 0 ? '#f28482' : '#fff5e4';
+        drawPixelRect(umbX + i * 7, umbY + 4, 7, 11, stripeColor);
+      }
+      drawPixelRect(umbX + 5, umbY, 34, 5, '#f28482');
+      drawPixelRect(umbX - 1, umbY + 14, 46, 2, '#5e3a32');
+
+      // القطة البيضاء الصغيرة النائمة بجانب الطاولة (تظهر في الفيديو 00:01)
+      drawPixelRect(108, 177, 11, 7, '#fff9f2');
+      drawPixelRect(107, 176, 12, 1, '#5e3a32');
+      drawPixelRect(109, 174, 2, 2, '#5e3a32');
+      drawPixelRect(115, 174, 2, 2, '#5e3a32');
+      drawPixelRect(111, 179, 2, 1, '#f28482');
+
+      // 6. مبنى المخبز الرئيسي على اليمين (Bakery Building)
+      const bx = 160;
+      const by = 86;
+      const bw = 136;
+      const bh = 98;
+
+      // شجيرات وزهور فوق سطح المخبز (مطابقة للفيديو)
+      drawPixelRect(bx + 6, by - 16, 46, 16, '#84b067');
+      drawPixelRect(bx + 12, by - 22, 34, 10, '#9ec47c');
+      drawPixelRect(bx + 76, by - 18, 52, 18, '#84b067');
+      drawPixelRect(bx + 84, by - 24, 36, 10, '#9ec47c');
+      // زهور صغيرة حمراء ووردية على الشجيرات العلوية
+      [[bx+16, by-14], [bx+32, by-18], [bx+90, by-16], [bx+108, by-20], [bx+118, by-12]].forEach(([fx, fy]) => {
+        drawPixelRect(fx, fy, 3, 3, '#e0533c');
+        drawPixelRect(fx+1, fy+1, 1, 1, '#fde8a5');
+      });
+
+      // جدار المخبز الكريمي مع حدود بنية
+      drawPixelRect(bx - 2, by - 2, bw + 4, bh + 2, '#5e3a32');
+      drawPixelRect(bx, by, bw, bh, '#fce3b4');
+      // خطوط طوب خفيفة على الواجهة
+      drawPixelRect(bx + 8, by + 10, 18, 4, '#f3ce93');
+      drawPixelRect(bx + 98, by + 12, 22, 4, '#f3ce93');
+
+      // لافتة سقف المخبز العلوية
+      drawPixelRect(bx - 4, by - 4, bw + 8, 6, '#d96b27');
+      drawPixelRect(bx + 42, by + 5, 52, 13, '#fff5e4');
+      drawPixelRect(bx + 43, by + 6, 50, 11, '#5e3a32');
+      ctx.fillStyle = '#fde8a5';
+      ctx.font = '6px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('BAKERY', bx + 68, by + 14);
+
+      // المظلة المخططة بالأحمر والأبيض (Red & White Striped Awning)
+      const awnY = by + 22;
+      drawPixelRect(bx - 5, awnY - 2, bw + 10, 22, '#5e3a32');
+      const numStripes = 12;
+      const stripeW = Math.floor(bw / numStripes);
+      for (let i = 0; i < numStripes; i++) {
+        const col = i % 2 === 0 ? '#e0533c' : '#fff5e4';
+        const darkCol = i % 2 === 0 ? '#b83b28' : '#e6d5b8';
+        const sx = bx + i * stripeW;
+        drawPixelRect(sx, awnY, stripeW, 15, col);
+        drawPixelRect(sx + 1, awnY + 15, stripeW - 2, 4, darkCol);
+      }
+
+      // نوافذ عرض الكعك على يسار ويمين باب المخبز
+      // نافذة اليسار
+      drawPixelRect(bx + 12, by + 48, 36, 30, '#5e3a32');
+      drawPixelRect(bx + 14, by + 50, 32, 26, '#fff5e4');
+      drawPixelRect(bx + 16, by + 52, 28, 16, '#a8dadc');
+      // كعكة معروضة داخل النافذة
+      drawPixelRect(bx + 24, by + 61, 12, 6, '#f28482');
+      drawPixelRect(bx + 26, by + 58, 8, 3, '#fff5e4');
+      drawPixelRect(bx + 29, by + 56, 2, 2, '#e0533c');
+
+      // نافذة اليمين
+      drawPixelRect(bx + 88, by + 48, 36, 30, '#5e3a32');
+      drawPixelRect(bx + 90, by + 50, 32, 26, '#fff5e4');
+      drawPixelRect(bx + 92, by + 52, 28, 16, '#a8dadc');
+      // كعكة معروضة داخل النافذة اليمنى
+      drawPixelRect(bx + 100, by + 61, 12, 6, '#f77f00');
+      drawPixelRect(bx + 102, by + 58, 8, 3, '#fde8a5');
+
+      // باب المخبز الخشبي في المنتصف (الهدف في المشهد الأول)
+      const doorX = bx + 53;
+      const doorY = by + 46;
+      drawPixelRect(doorX - 2, doorY - 2, 30, 54, '#5e3a32');
+      drawPixelRect(doorX, doorY, 26, 52, '#d96b27');
+      drawPixelRect(doorX + 3, doorY + 4, 20, 20, '#a8dadc');
+      drawPixelRect(doorX + 5, doorY + 6, 16, 16, '#fff5e4');
+      // مقبض الباب الذهبي
+      drawPixelRect(doorX + 20, doorY + 30, 3, 4, '#fde8a5');
+
+      // شجيرة خضراء على أقصى يمين المخبز
+      drawPixelRect(292, 152, 26, 32, '#84b067');
+      drawPixelRect(296, 146, 18, 12, '#9ec47c');
+
+      // 7. الأرضية والعشب (الرصيف في الأسفل)
+      drawPixelRect(0, 184, W, 6, '#84b067');
+      drawPixelRect(0, 190, W, 4, '#5e3a32');
+      drawPixelRect(0, 194, W, 46, '#e7c896');
+      // بلاط الرصيف
+      for (let tx = 0; tx < W; tx += 28) {
+        drawPixelRect(tx, 194, 2, 46, '#d3af79');
+      }
+
+      // 8. مؤشر لطيف فوق باب المخبز يوضح الدخول
+      const bobY = Math.sin(globalTick * 0.1) * 2;
+      drawPixelRect(doorX - 10, doorY - 20 + bobY, 46, 12, '#3d2622');
+      drawPixelRect(doorX - 9, doorY - 19 + bobY, 44, 10, '#fff5e4');
+      ctx.fillStyle = '#e0533c';
+      ctx.font = 'bold 6px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('ENTER 🎂', doorX + 13, doorY - 12 + bobY);
+
+      // 9. رسم الشخصية
+      drawPlayer(player.x, player.y, player.facing, player.animTimer, player.grounded);
+    }
+
+    // رسم كعكة صغيرة (Cupcake) في المشهد الثاني
+    function drawMiniCupcake(x, y) {
+      const rx = Math.round(x);
+      const ry = Math.round(y);
+      // القاعدة (الورقة البرتقالية/البنية)
+      drawPixelRect(rx + 2, ry + 7, 10, 6, '#5e3a32');
+      drawPixelRect(rx + 3, ry + 8, 8, 4, '#d96b27');
+      // الكريمة الزرقاء/البيضاء مثل الفيديو 00:04
+      drawPixelRect(rx + 1, ry + 3, 12, 5, '#5e3a32');
+      drawPixelRect(rx + 2, ry + 4, 10, 3, '#a8dadc');
+      drawPixelRect(rx + 3, ry + 2, 8, 2, '#fff5e4');
+      // الكرزة الحمراء في الأعلى
+      drawPixelRect(rx + 5, ry, 4, 3, '#e0533c');
+      drawPixelRect(rx + 6, ry, 1, 1, '#ffffff');
+    }
+
+    // رسم كائن المخبز الصغير المتحرك
+    function drawBakeryCritter(c) {
+      const rx = Math.round(c.x - cameraX);
+      const ry = Math.round(c.y);
+      const bounce = Math.floor(globalTick / 10) % 2;
+      drawPixelRect(rx, ry + 2 - bounce, 14, 10, '#5e3a32');
+      drawPixelRect(rx + 1, ry + 3 - bounce, 12, 8, '#f4a261');
+      drawPixelRect(rx + 2, ry + 1 - bounce, 10, 3, '#fff5e4'); // كريمة فوقه
+      drawPixelRect(rx + 3, ry + 6 - bounce, 2, 2, '#3d2622');
+      drawPixelRect(rx + 9, ry + 6 - bounce, 2, 2, '#3d2622');
+    }
+
+    // رسم مشهد 2: داخل المخبز (Collect your cake - مطابق للثواني 00:03 - 00:09)
+    function drawInsideScene() {
+      // 1. الخلفية الوردية ذات الطبقتين المموجتين (مطابقة تماماً للفيديو)
+      drawPixelRect(0, 0, W, H, '#fcd5ce');
+
+      // الطبقة المموجة السفلية الوردية الأغمق
+      const waveBaseY = 128;
+      drawPixelRect(0, waveBaseY, W, H - waveBaseY, '#f2949c');
+      for (let wx = -20; wx < W + 40; wx += 44) {
+        const parallaxX = Math.round(wx - (cameraX * 0.25) % 44);
+        drawPixelRect(parallaxX, waveBaseY - 8, 30, 10, '#f2949c');
+        drawPixelRect(parallaxX + 5, waveBaseY - 12, 20, 6, '#f2949c');
+      }
+
+      // 2. رسم المنصات والأرضية
+      platforms.forEach(p => {
+        const sx = Math.round(p.x - cameraX);
+        if (sx + p.w < -20 || sx > W + 20) return;
+
+        if (p.isGround) {
+          // القشرة العلوية البرتقالية للأرضية
+          drawPixelRect(sx, p.y, p.w, 2, '#5e3a32');
+          drawPixelRect(sx, p.y + 2, p.w, 6, '#d96b27');
+          drawPixelRect(sx, p.y + 8, p.w, 2, '#9c4118');
+          // جسم الأرضية الوردي المحمر مع خطوط الطوب
+          drawPixelRect(sx, p.y + 10, p.w, p.h - 10, '#f28482');
+          for (let bx = Math.floor(cameraX / 32) * 32; bx < cameraX + W + 32; bx += 32) {
+            const brickScreenX = Math.round(bx - cameraX);
+            drawPixelRect(brickScreenX, p.y + 10, 2, 16, '#c95b59');
+            drawPixelRect(brickScreenX + 16, p.y + 26, 2, 18, '#c95b59');
+          }
+          drawPixelRect(0, p.y + 25, W, 2, '#c95b59');
+        } else {
+          // المنصات العائمة (بني وبرتقالي مع حواف داكنة مثل 00:04)
+          drawPixelRect(sx, p.y, p.w, p.h, '#5e3a32');
+          drawPixelRect(sx + 2, p.y + 2, p.w - 4, 3, '#f6bd60');
+          drawPixelRect(sx + 2, p.y + 5, p.w - 4, p.h - 7, '#d96b27');
+          // أطراف المنصة
+          drawPixelRect(sx, p.y + 2, 4, p.h - 4, '#7f3d1d');
+          drawPixelRect(sx + p.w - 4, p.y + 2, 4, p.h - 4, '#7f3d1d');
+        }
+      });
+
+      // 3. رسم الكعكات الـ 10 القابلة للجمع
+      cupcakes.forEach(c => {
+        if (c.collected) return;
+        const sx = c.x - cameraX;
+        if (sx < -20 || sx > W + 20) return;
+        const bob = Math.sin(globalTick * 0.09 + c.bobOffset) * 2;
+        drawMiniCupcake(sx, c.y + bob);
+      });
+
+      // 4. رسم الكائنات المتحركة على المنصات
+      critters.forEach(c => {
+        const sx = c.x - cameraX;
+        if (sx < -30 || sx > W + 30) return;
+        drawBakeryCritter(c);
+      });
+
+      // 5. رسم طاولة النهاية والشجيرة وكعكة الميلاد الكبرى (في أقصى اليمين كما في 00:08-00:09)
+      const goalScreenX = Math.round(grandCakeGoal.tableX - cameraX);
+      if (goalScreenX < W + 60) {
+        // الشجيرة الخضراء خلف الطاولة (تظهر في الثانية 00:09)
+        drawPixelRect(goalScreenX + 38, 122, 48, 74, '#69995d');
+        drawPixelRect(goalScreenX + 44, 114, 38, 66, '#84b067');
+        drawPixelRect(goalScreenX + 52, 120, 26, 44, '#9ec47c');
+        // زهور وردية صغيرة على الشجيرة
+        drawPixelRect(goalScreenX + 48, 134, 4, 4, '#f28482');
+        drawPixelRect(goalScreenX + 66, 126, 4, 4, '#f28482');
+        drawPixelRect(goalScreenX + 58, 152, 4, 4, '#f28482');
+
+        // الطاولة الخشبية
+        drawPixelRect(goalScreenX, grandCakeGoal.tableY, grandCakeGoal.tableW, 7, '#5e3a32');
+        drawPixelRect(goalScreenX + 2, grandCakeGoal.tableY + 2, grandCakeGoal.tableW - 4, 3, '#d96b27');
+        // أرجل الطاولة
+        drawPixelRect(goalScreenX + 6, grandCakeGoal.tableY + 7, 6, 23, '#8c4a27');
+        drawPixelRect(goalScreenX + grandCakeGoal.tableW - 12, grandCakeGoal.tableY + 7, 6, 23, '#8c4a27');
+
+        // كعكة عيد الميلاد الكبرى ذات الطبقات فوق الطاولة
+        const cx = Math.round(grandCakeGoal.cakeX - cameraX);
+        const cy = grandCakeGoal.cakeY;
+        // هالة مضيئة خفيفة
+        if (Math.floor(globalTick / 15) % 2 === 0) {
+          drawPixelRect(cx - 2, cy - 4, 32, 30, 'rgba(253, 232, 165, 0.25)');
+        }
+        // قاعدة الكعكة
+        drawPixelRect(cx, cy + 25, 28, 3, '#fff5e4');
+        // الطبقة الأولى
+        drawPixelRect(cx + 2, cy + 16, 24, 9, '#d96b27');
+        drawPixelRect(cx + 2, cy + 15, 24, 3, '#f6bd60');
+        // الطبقة الثانية
+        drawPixelRect(cx + 6, cy + 8, 16, 8, '#e07a2e');
+        drawPixelRect(cx + 6, cy + 7, 16, 3, '#fde8a5');
+        // الشموع الثلاث المشتعلة
+        [cx + 9, cx + 13, cx + 17].forEach(candleX => {
+          drawPixelRect(candleX, cy + 2, 2, 5, '#fff5e4');
+          const flicker = Math.floor(globalTick / 6) % 2;
+          drawPixelRect(candleX, cy - 1 - flicker, 2, 3, '#ffbe0b');
+          drawPixelRect(candleX, cy - flicker, 2, 2, '#fb5607');
+        });
+      }
+
+      // 6. رسم اللاعب
+      drawPlayer(player.x - cameraX, player.y, player.facing, player.animTimer, player.grounded);
+
+      // 7. تأثيرات النقاط العائمة (+15)
+      collectPopups.forEach(p => {
+        ctx.fillStyle = '#3d2622';
+        ctx.font = 'bold 8px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('+15', Math.round(p.x - cameraX), Math.round(p.y));
+      });
+
+      // 8. واجهة المعلومات العلوية (HUD) مطابقة للفيديو تماماً
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#3d2622';
+      ctx.font = 'bold 9px monospace';
+      ctx.fillText('Collect your cake', 12, 18);
+
+      // القلوب الثلاثة تحت النص
+      for (let i = 0; i < 3; i++) {
+        const hx = 12 + i * 13;
+        const hy = 23;
+        const activeHeart = i < hearts;
+        const hCol = activeHeart ? '#e0533c' : '#b5838d';
+        drawPixelRect(hx + 1, hy, 3, 2, '#3d2622');
+        drawPixelRect(hx + 5, hy, 3, 2, '#3d2622');
+        drawPixelRect(hx, hy + 1, 9, 4, '#3d2622');
+        drawPixelRect(hx + 1, hy + 5, 7, 2, '#3d2622');
+        drawPixelRect(hx + 3, hy + 7, 3, 2, '#3d2622');
+
+        drawPixelRect(hx + 1, hy + 1, 3, 3, hCol);
+        drawPixelRect(hx + 5, hy + 1, 3, 3, hCol);
+        drawPixelRect(hx + 2, hy + 4, 5, 2, hCol);
+        drawPixelRect(hx + 3, hy + 6, 3, 2, hCol);
+      }
+
+      // إشعار "Checkpoint saved" كما في الثانية 00:03
+      if (checkpointBannerTimer > 0) {
+        ctx.fillStyle = `rgba(94, 58, 50, ${Math.min(1, checkpointBannerTimer / 40)})`;
+        ctx.font = '7px monospace';
+        ctx.fillText('Checkpoint saved', 12, 43);
+      }
+
+      // عداد النقاط والكعكات في أقصى اليمين (مثال: 015 🧁 10)
+      const scoreStr = String(score).padStart(3, '0');
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#3d2622';
+      ctx.font = 'bold 9px monospace';
+      ctx.fillText(scoreStr, 272, 18);
+
+      // أيقونة الكعكة الصغيرة بجانب العداد
+      drawMiniCupcake(276, 8);
+
+      ctx.fillStyle = '#3d2622';
+      ctx.font = 'bold 9px monospace';
+      ctx.fillText(String(collectedCount), 308, 18);
+    }
+
+    // رسم مشهد 3: شاشة الاحتفال السوداء وكعكة عيد الميلاد ذات الثلاث طبقات (00:10 - 00:28)
+    function drawFinaleScene() {
+      // 1. خلفية سوداء بالكامل مثل الفيديو
+      drawPixelRect(0, 0, W, H, '#000000');
+
+      // 2. رسم قصاصات الاحتفال الملونة (Confetti)
+      finaleState.confetti.forEach(c => {
+        drawPixelRect(c.x, c.y, c.size, c.size, c.color);
+      });
+
+      // 3. رسم كعكة عيد الميلاد الكبيرة المكونة من 3 طبقات في المنتصف (مطابقة للثواني 00:10-00:27)
+      const cx = 160; // مركز الشاشة أفقياً
+      const baseY = 128; // قاعدة الكعكة
+
+      // حامل الكعكة الأبيض في الأسفل
+      drawPixelRect(cx - 38, baseY + 4, 76, 4, '#d8e2dc');
+      drawPixelRect(cx - 42, baseY + 2, 84, 3, '#ffffff');
+
+      // --- الطبقة السفلية الكبرى (Tier 1) ---
+      drawPixelRect(cx - 34, baseY - 18, 68, 20, '#d96b27');
+      drawPixelRect(cx - 32, baseY - 16, 64, 16, '#e8833a');
+      // خط الحشوة في وسط الطبقة السفلية
+      drawPixelRect(cx - 32, baseY - 8, 64, 3, '#9c3d18');
+      // الكريمة البرتقالية الفاتحة المنسدلة فوق الطبقة السفلية
+      drawPixelRect(cx - 35, baseY - 21, 70, 5, '#f6a54c');
+      for (let dx = -32; dx <= 28; dx += 10) {
+        drawPixelRect(cx + dx, baseY - 16, 5, 4, '#f6a54c');
+      }
+      // حبات الفراولة/الكرز على الطبقة السفلية
+      for (let sx = -28; sx <= 28; sx += 14) {
+        drawPixelRect(cx + sx, baseY - 24, 4, 4, '#e0533c');
+        drawPixelRect(cx + sx + 1, baseY - 25, 2, 1, '#84b067');
+      }
+
+      // --- الطبقة الوسطى (Tier 2) ---
+      drawPixelRect(cx - 24, baseY - 38, 48, 17, '#d96b27');
+      drawPixelRect(cx - 22, baseY - 36, 44, 14, '#e8833a');
+      drawPixelRect(cx - 22, baseY - 29, 44, 2, '#9c3d18');
+      // كريمة الطبقة الوسطى
+      drawPixelRect(cx - 25, baseY - 41, 50, 5, '#f6a54c');
+      for (let dx = -21; dx <= 19; dx += 8) {
+        drawPixelRect(cx + dx, baseY - 36, 4, 4, '#f6a54c');
+      }
+      // حبات الفراولة على الطبقة الوسطى
+      for (let sx = -18; sx <= 18; sx += 12) {
+        drawPixelRect(cx + sx, baseY - 44, 4, 4, '#e0533c');
+      }
+
+      // --- الطبقة العلوية (Tier 3) ---
+      drawPixelRect(cx - 15, baseY - 54, 30, 13, '#d96b27');
+      drawPixelRect(cx - 13, baseY - 52, 26, 11, '#e8833a');
+      drawPixelRect(cx - 16, baseY - 57, 32, 4, '#f6a54c');
+      for (let dx = -13; dx <= 11; dx += 6) {
+        drawPixelRect(cx + dx, baseY - 53, 3, 3, '#f6a54c');
+      }
+
+      // --- الشموع الثلاث في أعلى الكعكة ---
+      const candlePositions = [cx - 9, cx - 1, cx + 7];
+      candlePositions.forEach((candX, idx) => {
+        // جسم الشمعة
+        drawPixelRect(candX, baseY - 68, 3, 11, '#fff5e4');
+        drawPixelRect(candX, baseY - 65, 3, 2, '#f28482');
+        drawPixelRect(candX, baseY - 61, 3, 2, '#f28482');
+
+        if (finaleState.candlesLit) {
+          // شعلة الشمعة المتحركة
+          const flick = Math.floor((globalTick + idx * 5) / 5) % 3;
+          drawPixelRect(candX - 1, baseY - 75 - (flick === 1 ? 1 : 0), 5, 6, 'rgba(255, 183, 3, 0.28)');
+          drawPixelRect(candX, baseY - 74 - (flick === 0 ? 1 : 0), 3, 5, '#fb8500');
+          drawPixelRect(candX, baseY - 73, 3, 3, '#ffb703');
+          drawPixelRect(candX + 1, baseY - 72, 1, 2, '#ffffff');
+        } else {
+          // فتيل الشمعة بعد إطفائها
+          drawPixelRect(candX + 1, baseY - 70, 1, 2, '#5e3a32');
+        }
+      });
+
+      // رسم دخان الشموع عند إطفائها
+      finaleState.smokePuffs.forEach(s => {
+        ctx.fillStyle = `rgba(220, 220, 220, ${s.alpha})`;
+        ctx.fillRect(Math.round(s.x), Math.round(s.y), s.size, s.size);
+      });
+
+      // 4. النص الرئيسي تحت الكعكة بتأثير الكتابة التدريجية (Typewriter) مثل الفيديو 00:10
+      const fullHeadline = BIRTHDAY_CONFIG.headlineMessage || `happy birthday to ${BIRTHDAY_CONFIG.friendName}`;
+      const visibleHeadline = fullHeadline.slice(0, Math.floor(finaleState.typedChars));
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#fff5e4';
+      ctx.font = 'bold 10px "Cairo", monospace';
+      ctx.fillText(visibleHeadline, cx, 152);
+
+      // الرسالة الفرعية المخصصة لصديقتك
+      if (finaleState.typedChars >= fullHeadline.length && BIRTHDAY_CONFIG.subMessage) {
+        ctx.fillStyle = '#fcd5ce';
+        ctx.font = 'bold 9px "Cairo", sans-serif';
+        ctx.fillText(BIRTHDAY_CONFIG.subMessage, cx, 168);
+      }
+
+      // 5. مجموع النقاط والكعكات وأزرار [ restart ] و [ exit ] (كما في الثانية 00:26 من الفيديو)
+      if (finaleState.showButtons) {
+        ctx.fillStyle = '#fde8a5';
+        ctx.font = 'bold 9px monospace';
+        ctx.fillText(`${score} points / ${collectedCount} cakes`, cx, 190);
+
+        // زر restart
+        const rb = finaleState.restartBtnRect;
+        drawPixelRect(rb.x, rb.y, rb.w, rb.h, '#4a3531');
+        drawPixelRect(rb.x + 1, rb.y + 1, rb.w - 2, rb.h - 2, '#2b2129');
+        ctx.fillStyle = '#d8e2dc';
+        ctx.font = '8px monospace';
+        ctx.fillText('restart', rb.x + rb.w / 2, rb.y + 13);
+
+        // زر exit
+        const eb = finaleState.exitBtnRect;
+        drawPixelRect(eb.x, eb.y, eb.w, eb.h, '#4a3531');
+        drawPixelRect(eb.x + 1, eb.y + 1, eb.w - 2, eb.h - 2, '#2b2129');
+        ctx.fillStyle = '#d8e2dc';
+        ctx.font = '8px monospace';
+        ctx.fillText('exit', eb.x + eb.w / 2, eb.y + 13);
+      }
+    }
+
+    /* =========================================================================
+       ⚙️ 6. حلقة التحديث الفيزيائي والمنطقي (Update Loop)
+       ========================================================================= */
+    function updateGame() {
+      globalTick++;
+
+      // معالجة الانتقال السلس بين المشاهد
+      if (transitioningTo) {
+        sceneTransitionAlpha += 0.08;
+        if (sceneTransitionAlpha >= 1) {
+          sceneTransitionAlpha = 1;
+          if (transitioningTo === 'exterior') initExteriorScene();
+          else if (transitioningTo === 'inside') initInsideScene();
+          else if (transitioningTo === 'finale') initFinaleScene();
+          transitioningTo = null;
+        }
+        return;
+      } else if (sceneTransitionAlpha > 0) {
+        sceneTransitionAlpha = Math.max(0, sceneTransitionAlpha - 0.08);
+      }
+
+      // تحديث المشهد الأول: خارج المخبز
+      if (currentScene === 'exterior') {
+        exteriorClouds.forEach(c => {
+          c.x += c.speed;
+          if (c.x > W + 10) c.x = -c.w - 10;
+        });
+
+        // حركة اللاعب
+        if (keys.left) {
+          player.vx = -player.speed;
+          player.facing = -1;
+          player.animTimer++;
+        } else if (keys.right) {
+          player.vx = player.speed;
+          player.facing = 1;
+          player.animTimer++;
+        } else {
+          player.vx *= 0.7;
+        }
+
+        if (keys.jumpJustPressed && player.grounded) {
+          player.vy = player.jumpForce * 0.85;
+          player.grounded = false;
+          sfx.jump();
+        }
+
+        player.vy += player.gravity;
+        player.x += player.vx;
+        player.y += player.vy;
+
+        // حدود الأرضية في الخارج
+        if (player.y >= 166) {
+          player.y = 166;
+          player.vy = 0;
+          player.grounded = true;
+        }
+        if (player.x < 8) player.x = 8;
+        if (player.x > W - 24) player.x = W - 24;
+
+        // عند الوصول إلى باب المخبز (حوالي x = 212)، ينتقل تلقائياً إلى داخل المخبز!
+        if (player.x >= 208) {
+          sfx.enterDoor();
+          transitionToScene('inside');
+        }
+      }
+
+      // تحديث المشهد الثاني: داخل المخبز (Collect your cake)
+      else if (currentScene === 'inside') {
+        if (checkpointBannerTimer > 0) checkpointBannerTimer--;
+        if (player.invincibleTimer > 0) player.invincibleTimer--;
+
+        if (keys.left) {
+          player.vx = -player.speed;
+          player.facing = -1;
+          player.animTimer++;
+        } else if (keys.right) {
+          player.vx = player.speed;
+          player.facing = 1;
+          player.animTimer++;
+        } else {
+          player.vx *= 0.72;
+        }
+
+        if (keys.jumpJustPressed && player.grounded) {
+          player.vy = player.jumpForce;
+          player.grounded = false;
+          sfx.jump();
+        }
+
+        const prevBottom = player.y + player.h;
+        player.vy += player.gravity;
+        player.x += player.vx;
+        player.y += player.vy;
+        player.grounded = false;
+
+        // تصادم المنصات (One-way platforms from above)
+        platforms.forEach(p => {
+          const withinX = player.x + player.w - 3 > p.x && player.x + 3 < p.x + p.w;
+          if (withinX && player.vy >= 0) {
+            if (prevBottom <= p.y + 6 && player.y + player.h >= p.y) {
+              player.y = p.y - player.h;
+              player.vy = 0;
+              player.grounded = true;
+            }
+          }
+        });
+
+        // حدود المرحلة
+        if (player.x < 6) player.x = 6;
+        if (player.x > LEVEL_WIDTH - 24) player.x = LEVEL_WIDTH - 24;
+
+        // متابعة الكاميرا للاعب بسلاسة
+        const targetCamX = Math.max(0, Math.min(LEVEL_WIDTH - W, player.x - W * 0.38));
+        cameraX += (targetCamX - cameraX) * 0.14;
+
+        // جمع قطع الكعك (Cupcakes)
+        cupcakes.forEach(c => {
+          if (!c.collected) {
+            const dx = (player.x + player.w / 2) - (c.x + 7);
+            const dy = (player.y + player.h / 2) - (c.y + 7);
+            if (Math.hypot(dx, dy) < 15) {
+              c.collected = true;
+              collectedCount++;
+              score += 15; // 10 كعكات × 15 = 150 نقطة مثل الفيديو تماماً!
+              sfx.collectCake();
+              collectPopups.push({ x: c.x + 7, y: c.y, life: 35 });
+            }
+          }
+        });
+
+        // تحديث النصوص العائمة (+15)
+        for (let i = collectPopups.length - 1; i >= 0; i--) {
+          collectPopups[i].y -= 0.4;
+          collectPopups[i].life--;
+          if (collectPopups[i].life <= 0) collectPopups.splice(i, 1);
+        }
+
+        // تحديث الكائنات المتحركة على المنصات
+        critters.forEach(c => {
+          c.x += c.vx;
+          if (c.x <= c.minX || c.x >= c.maxX) c.vx *= -1;
+
+          // فحص اللمس مع اللاعب
+          if (player.invincibleTimer <= 0) {
+            const overlapX = player.x + player.w - 3 > c.x && player.x + 3 < c.x + c.w;
+            const overlapY = player.y + player.h - 2 > c.y && player.y + 2 < c.y + c.h;
+            if (overlapX && overlapY) {
+              hearts = Math.max(1, hearts - 1); // لا نجعلها تخسر أبداً في عيد ميلادها!
+              player.invincibleTimer = 65;
+              player.vy = -3.2;
+              sfx.hurt();
+            }
+          }
+        });
+
+        // الوصول إلى كعكة عيد الميلاد الكبرى على الطاولة في نهاية المرحلة
+        if (player.x + player.w >= grandCakeGoal.tableX - 4 && player.y + player.h >= grandCakeGoal.cakeY) {
+          sfx.enterDoor();
+          transitionToScene('finale');
+        }
+      }
+
+      // تحديث المشهد الثالث: شاشة الاحتفال السوداء
+      else if (currentScene === 'finale') {
+        finaleState.timer++;
+
+        const fullHeadline = BIRTHDAY_CONFIG.headlineMessage || `happy birthday to ${BIRTHDAY_CONFIG.friendName}`;
+        if (finaleState.typedChars < fullHeadline.length) {
+          finaleState.typedChars += 0.35;
+        }
+
+        // إطلاق القصاصات الملونة تلقائياً بعد اكتمال النص (مثل الثانية 00:18 في الفيديو)
+        if (finaleState.timer === 75) {
+          spawnConfettiBurst(80);
+        }
+        if (finaleState.timer > 75 && finaleState.timer % 55 === 0 && finaleState.confetti.length < 120) {
+          spawnConfettiBurst(28, 10);
+        }
+        if (finaleState.timer >= 120) {
+          finaleState.showButtons = true;
+        }
+
+        // السماح بإطفاء الشموع بزر القفز أيضاً
+        if (keys.jumpJustPressed) {
+          blowOutCandlesInteraction();
+        }
+
+        // تحديث حركة القصاصات الملونة
+        for (let i = finaleState.confetti.length - 1; i >= 0; i--) {
+          const c = finaleState.confetti[i];
+          c.x += c.vx + Math.sin((globalTick + i) * 0.05) * 0.25;
+          c.y += c.vy;
+          c.vy = Math.min(1.2, c.vy + 0.03);
+          c.life--;
+          if (c.life <= 0 || c.y > H + 10) {
+            finaleState.confetti.splice(i, 1);
+          }
+        }
+
+        // تحديث دخان الشموع
+        for (let i = finaleState.smokePuffs.length - 1; i >= 0; i--) {
+          const s = finaleState.smokePuffs[i];
+          s.x += s.vx;
+          s.y += s.vy;
+          s.alpha -= 0.02;
+          if (s.alpha <= 0) finaleState.smokePuffs.splice(i, 1);
+        }
+      }
+
+      keys.jumpJustPressed = false;
+    }
+
+    function renderGame() {
+      ctx.clearRect(0, 0, W, H);
+
+      if (currentScene === 'exterior') {
+        drawExteriorScene();
+      } else if (currentScene === 'inside') {
+        drawInsideScene();
+      } else if (currentScene === 'finale') {
+        drawFinaleScene();
+      }
+
+      // طبقة التلاشي بين المشاهد
+      if (sceneTransitionAlpha > 0) {
+        ctx.fillStyle = `rgba(0, 0, 0, ${sceneTransitionAlpha})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+    }
+
+    function gameLoop() {
+      updateGame();
+      renderGame();
+      requestAnimationFrame(gameLoop);
+    }
+
+    /* =========================================================================
+       📱 7. دعم اللمس المتعدد على الآيفون (iPhone Multi-Touch) والضغط على الكانفاس
+       ========================================================================= */
+    const btnLeft = document.getElementById('btnLeft');
+    const btnRight = document.getElementById('btnRight');
+    const btnJump = document.getElementById('btnJump');
+
+    function bindArcadeButton(btnElement, keyName) {
+      const press = (e) => {
+        if (e.cancelable) e.preventDefault();
+        sfx.init();
+        if (keyName === 'jump' && !keys.jump) {
+          keys.jumpJustPressed = true;
+        }
+        keys[keyName] = true;
+        btnElement.classList.add('pressed');
+      };
+
+      const release = (e) => {
+        if (e && e.cancelable) e.preventDefault();
+        keys[keyName] = false;
+        btnElement.classList.remove('pressed');
+      };
+
+      btnElement.addEventListener('touchstart', press, { passive: false });
+      btnElement.addEventListener('touchend', release, { passive: false });
+      btnElement.addEventListener('touchcancel', release, { passive: false });
+
+      btnElement.addEventListener('mousedown', press);
+      btnElement.addEventListener('mouseup', release);
+      btnElement.addEventListener('mouseleave', release);
+    }
+
+    bindArcadeButton(btnLeft, 'left');
+    bindArcadeButton(btnRight, 'right');
+    bindArcadeButton(btnJump, 'jump');
+
+    // دعم لوحة المفاتيح للتجربة على الكمبيوتر أيضاً
+    window.addEventListener('keydown', (e) => {
+      if (document.getElementById('customModal').classList.contains('flex')) return;
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+      if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+      if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+        if (!keys.jump) keys.jumpJustPressed = true;
+        keys.jump = true;
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+      if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+      if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') keys.jump = false;
+    });
+
+    // التعامل مع اللمس/النقر المباشر داخل شاشة اللعبة (لإطفاء الشموع أو الضغط على restart / exit)
+    function handleCanvasPointer(clientX, clientY) {
+      sfx.init();
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = W / rect.width;
+      const scaleY = H / rect.height;
+      const cx = (clientX - rect.left) * scaleX;
+      const cy = (clientY - rect.top) * scaleY;
+
+      if (currentScene === 'finale') {
+        // فحص زر restart
+        const rb = finaleState.restartBtnRect;
+        if (finaleState.showButtons && cx >= rb.x && cx <= rb.x + rb.w && cy >= rb.y && cy <= rb.y + rb.h) {
+          sfx.enterDoor();
+          transitionToScene('inside');
+          return;
+        }
+        // فحص زر exit (يعود إلى خارج المخبز مثل الثانية 00:29 من الفيديو)
+        const eb = finaleState.exitBtnRect;
+        if (finaleState.showButtons && cx >= eb.x && cx <= eb.x + eb.w && cy >= eb.y && cy <= eb.y + eb.h) {
+          sfx.enterDoor();
+          transitionToScene('exterior');
+          return;
+        }
+        // النقر على الكعكة يطفئ/يشعل الشموع ويطلق الألعاب النارية
+        blowOutCandlesInteraction();
+      }
+    }
+
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.cancelable) e.preventDefault();
+      if (e.touches && e.touches.length > 0) {
+        handleCanvasPointer(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('mousedown', (e) => {
+      handleCanvasPointer(e.clientX, e.clientY);
+    });
+
+    // منع التكبير المزدوج في سفاري الآيفون
+    document.addEventListener('gesturestart', (e) => e.preventDefault());
+
+    /* =========================================================================
+       🛠️ 8. أزرار الصوت، إعادة البداية، ونافذة تخصيص الاسم والرسالة
+       ========================================================================= */
+    const audioToggleBtn = document.getElementById('audioToggleBtn');
+    const audioIcon = document.getElementById('audioIcon');
+    const audioText = document.getElementById('audioText');
+
+    audioToggleBtn.addEventListener('click', () => {
+      sfx.init();
+      sfx.muted = !sfx.muted;
+      audioIcon.textContent = sfx.muted ? '🔇' : '🔊';
+      audioText.textContent = sfx.muted ? 'مكتوم' : 'الصوت';
+    });
+
+    document.getElementById('resetSceneBtn').addEventListener('click', () => {
+      sfx.enterDoor();
+      transitionToScene('exterior');
+    });
+
+    // نافذة التخصيص (Modal)
+    const customModal = document.getElementById('customModal');
+    const openCustomModalBtn = document.getElementById('openCustomModalBtn');
+    const closeCustomModalBtn = document.getElementById('closeCustomModalBtn');
+    const inputFriendName = document.getElementById('inputFriendName');
+    const inputHeadline = document.getElementById('inputHeadline');
+    const inputSubMessage = document.getElementById('inputSubMessage');
+    const saveCustomBtn = document.getElementById('saveCustomBtn');
+    const copyGiftLinkBtn = document.getElementById('copyGiftLinkBtn');
+    const copyFeedback = document.getElementById('copyFeedback');
+
+    function openModal() {
+      inputFriendName.value = BIRTHDAY_CONFIG.friendName;
+      inputHeadline.value = BIRTHDAY_CONFIG.headlineMessage;
+      inputSubMessage.value = BIRTHDAY_CONFIG.subMessage;
+      copyFeedback.classList.add('hidden');
+      customModal.classList.remove('hidden');
+      customModal.classList.add('flex');
+    }
+
+    function closeModal() {
+      customModal.classList.add('hidden');
+      customModal.classList.remove('flex');
+    }
+
+    openCustomModalBtn.addEventListener('click', openModal);
+    closeCustomModalBtn.addEventListener('click', closeModal);
+
+    function applyInputsToConfig() {
+      const nameVal = inputFriendName.value.trim() || 'صديقتي';
+      const headVal = inputHeadline.value.trim() || `happy birthday to ${nameVal}!`;
+      const subVal = inputSubMessage.value.trim();
+
+      BIRTHDAY_CONFIG.friendName = nameVal;
+      BIRTHDAY_CONFIG.headlineMessage = headVal;
+      BIRTHDAY_CONFIG.subMessage = subVal;
+
+      try {
+        localStorage.setItem('bday_bakery_custom_v1', JSON.stringify(BIRTHDAY_CONFIG));
+      } catch (e) {}
+    }
+
+    saveCustomBtn.addEventListener('click', () => {
+      applyInputsToConfig();
+      if (currentScene === 'finale') {
+        finaleState.typedChars = 0;
+        spawnConfettiBurst(50);
+      }
+      closeModal();
+    });
+
+    copyGiftLinkBtn.addEventListener('click', () => {
+      applyInputsToConfig();
+      const url = new URL(window.location.href);
+      url.searchParams.set('gift', '1');
+      url.searchParams.set('name', BIRTHDAY_CONFIG.friendName);
+      url.searchParams.set('msg', BIRTHDAY_CONFIG.headlineMessage);
+      url.searchParams.set('sub', BIRTHDAY_CONFIG.subMessage);
+
+      const shareUrl = url.toString();
+      const tempInput = document.createElement('textarea');
+      tempInput.value = shareUrl;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      try {
+        document.execCommand('copy');
+      } catch (err) {}
+      document.body.removeChild(tempInput);
+
+      copyFeedback.classList.remove('hidden');
+    });
+
+    // تشغيل اللعبة عند تحميل الصفحة
+    window.onload = function () {
+      initExteriorScene();
+      gameLoop();
+    };
+  </script>
+</body>
+</html>
